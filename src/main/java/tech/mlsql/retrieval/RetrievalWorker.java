@@ -173,4 +173,9 @@ public class RetrievalWorker {
         }
         return result;
     }
+
+    public long commit(String database, String table) throws Exception {
+        var searcher = getSearcher(database,table);
+        return searcher.indexWriter().commit();
+    }
 }

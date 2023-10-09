@@ -122,4 +122,14 @@ public class RetrievalMaster {
         }
         return Utils.toJson(jsonResult);
     }
+
+    // commit the target table index
+    public void commit(String database, String table) throws Exception {
+        var tasks = new ArrayList<ObjectRef<Long>>();
+        for (var worker : this.workers) {
+            var ref = worker.task(RetrievalWorker::commit, database, table).remote();
+            tasks.add(ref);
+        }
+        Ray.get(tasks);
+    }
 }
