@@ -36,7 +36,7 @@ That's all.
 
 ## Usage (high-level Python API)
 
-We provide the python API to build the index, you can use the following code to build the index.
+We provide the a high-level python API to build the index, you can use the following code to build the index.
 
 ```python
 import ray
