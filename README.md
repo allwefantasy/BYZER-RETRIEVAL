@@ -16,7 +16,7 @@ and foreign memory will bring a great performance improvement to the system.
 1. Ray cluster == 2.7.0
 2. JDK 21 or higher
 3. Python 3.10.11
-4. byzerllm (python package) 
+4. byzerllm >= 0.1.5 (python package) 
 
 ## Deploy
 
