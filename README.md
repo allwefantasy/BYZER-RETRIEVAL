@@ -34,9 +34,115 @@ Also make sure `byzerllm` is installed in your python environment of ray cluster
 
 That's all.
 
+## Usage (high-level Python API)
+
+We provide the python API to build the index, you can use the following code to build the index.
+
+```python
+import ray
+
+code_search_path=["/home/winubuntu/softwares/byzer-retrieval-lib/"]
+env_vars = {"JAVA_HOME": "/home/winubuntu/softwares/jdk-21",
+            "PATH":"/home/winubuntu/softwares/jdk-21/bin:/home/winubuntu/.cargo/bin:/usr/local/cuda/bin:/home/winubuntu/softwares/byzer-lang-all-in-one-linux-amd64-3.1.1-2.3.2/jdk8/bin:/home/winubuntu/miniconda3/envs/byzerllm-dev/bin:/home/winubuntu/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"}
 
 
-## Usage (Python API)
+ray.init(address="auto",namespace="default",
+                 job_config=ray.job_config.JobConfig(code_search_path=code_search_path,
+                                                      runtime_env={"env_vars": env_vars})
+                 )            
+```
+
+In the above code, we use the `ray.init` to connect an existing ray cluster, and we set the `code_search_path`
+to the path of the jar files which we already put in ray cluster, and set the `runtime_env` to the path of the JDK 21.  
+Notice that `JAVA_HOME`, `PATH` are both required.
+
+Then we can start a retrieval cluster:
+
+```python
+from byzerllm.records import EnvSettings,ClusterSettings,TableSettings,JVMSettings
+from byzerllm.utils.retrieval import ByzerRetrieval
+import os
+import ray
+
+byzer = ByzerRetrieval()
+byzer.launch_gateway()
+byzer.start_cluster(
+        cluster_settings=ClusterSettings(
+            name="cluster1",
+            location="/tmp/cluster1",
+            numNodes=1
+        ),
+            env_settings=EnvSettings(
+            javaHome=env_vars["JAVA_HOME"],
+            path=env_vars["PATH"]
+        ), 
+            jvm_settings=JVMSettings(
+            options=[]
+        ))
+
+```
+
+In this step, we will start cluster named `cluster1` with only one node, and the cluster will store the data in `/tmp/cluster1`.
+Notice that we still need to set the `JAVA_HOME` and `PATH` in `EnvSettings`.  You can use jvm_options to set the JVM options e.g.
+`-Xmx32g` to set the max heap size of Retriveal Node.
+
+Then we can create a table in the cluster:
+
+```python
+byzer.create_table("cluster1",TableSettings(
+    database="db1",table="table1",
+    schema="st(field(_id,long),field(name,string),field(content,string,analyze),field(vector,array(float)))",
+    location="/tmp/cluster1",num_shards=1,
+))
+```
+
+After that, we can insert some data into the table:
+
+```python
+data = [
+    {"_id":1, "name":"a", "content":"b c", "vector":[1.0,2.0,3.0]},
+    {"_id":2, "name":"d", "content":"b e", "vector":[1.0,2.6,4.0]}
+]
+
+import json
+
+data_refs = []
+
+for item in data:
+    itemref = ray.put(json.dumps(item,ensure_ascii=False))
+    data_refs.append(itemref)
+
+byzer.build("cluster1","db1","table1",data_refs)
+
+byzer.commit("cluster1","db1","table1")
+```
+In this step, we will insert the data into the table, and build the index. Notice that 
+
+1. the data should be put in the ray cluster object store.
+2. we need to commit the index after building the index to make the index persistent.
+3. we strongly recommend use JuiceFS to store the index data, because JuiceFS is a distributed file system which is 
+   compatible with POSIX, and it is very easy to deploy and use. 
+
+
+For now, we can search the data.
+
+try to search by keyword:
+```python
+byzer.search_keyword("cluster1","db1","table1",
+                     keyword="c",fields=["content"],limit=10)
+## output: [{'name': 'a', '_id': 1, '_score': 0.31506687, 'content': 'b c'}]
+```
+
+try to search by vector:
+```python
+byzer.search_vector("cluster1","db1","table1",
+                    vector=[1.0,2.0,3.0],vector_field="vector",limit=10)
+## output: [{'name': 'a', '_id': 1, '_score': 1.0, 'content': 'b c'},{'name': 'd', '_id': 2, '_score': 0.9989467, 'content': 'b e'}]                    
+```
+
+
+
+## Usage (low-level Python API)
 
 ### Start Cluster
 
@@ -78,7 +184,8 @@ env_settings = EnvSettings(
 
 cluster_setting = ClusterSettings(
     name="cluster1",
-    location="/tmp/cluster1"
+    location="/tmp/cluster1",
+    numNodes=1
 )
 
 table_settings = TableSettings(
@@ -92,10 +199,9 @@ jvm_settings = JVMSettings(
 )
 
 obj_ref1 = retrieval_gateway.buildCluster.remote(
-    json.dumps(cluster_setting,default=lambda o: o.__dict__),
-    json.dumps(table_settings,default=lambda o: o.__dict__),
-    json.dumps(env_settings,default=lambda o: o.__dict__),
-    json.dumps(jvm_settings,default=lambda o: o.__dict__)
+    cluster_setting.json(),
+    env_settings.json(),
+    jvm_settings.json()
 )
 ray.get(obj_ref1)
 ```
@@ -128,6 +234,8 @@ data_refs = []
 for item in data:
     itemref = ray.put(json.dumps(item,ensure_ascii=False))
     data_refs.append(itemref)
+
+cluster.createTable.remote(tableSettings.json())
 ```
 
 For now, we can insert the data into the index:

@@ -20,18 +20,9 @@ public class RetrievalMaster {
     private List<ActorHandle<RetrievalWorker>> workers = new ArrayList<>();
 
     public RetrievalMaster(ClusterInfo clusterInfo) {
-        var tableSettings = clusterInfo.tableSettings();
         var clusterSettings = clusterInfo.clusterSettings();
         var envSettings = clusterInfo.envSettings();
 
-        if (tableSettings.location().isEmpty()) {
-            tableSettings = new TableSettings(
-                    tableSettings.database(),
-                    tableSettings.table(),
-                    tableSettings.schema(),
-                    clusterSettings.location(),
-                    tableSettings.num_shards());
-        }
 
         var runtimeEnv = new RuntimeEnv.Builder().build();
         Map<String, String> envMap = new HashMap<>();
@@ -39,14 +30,25 @@ public class RetrievalMaster {
         envMap.put("PATH", envSettings.path());
         runtimeEnv.set(RuntimeEnvName.ENV_VARS, envMap);
 
-        for (int i = 0; i < tableSettings.num_shards(); i++) {
+        for (int i = 0; i < clusterSettings.getNumNodes(); i++) {
             workers.add(
-                    Ray.actor(RetrievalWorker::new, clusterSettings, tableSettings).
+                    Ray.actor(RetrievalWorker::new, clusterSettings).
                             setName(clusterSettings.name() + "-worker").
                             setRuntimeEnv(runtimeEnv).
                             setJvmOptions(clusterInfo.jvmSettings().options())
                             .remote());
         }
+    }
+
+    public boolean createTable(String tableSettingStr) throws Exception {
+        var tableSettings = Utils.toRecord(tableSettingStr, TableSettings.class);
+        var tasks = new ArrayList<ObjectRef<Boolean>>();
+        for (var worker : workers) {
+            var ref = worker.task(RetrievalWorker::createTable, tableSettings).remote();
+            tasks.add(ref);
+        }
+        Ray.get(tasks);
+        return true;
     }
 
     // just for test

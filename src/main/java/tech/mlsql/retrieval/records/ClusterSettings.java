@@ -12,13 +12,24 @@ public class ClusterSettings implements Serializable {
     private  String name;
     private  String location;
 
-    public ClusterSettings(String name, String location) {
+    private int numNodes = 1;
+
+    public ClusterSettings(String name, String location, int numNodes) {
         this.name = name;
         this.location = location;
+        this.numNodes = numNodes;
     }
 
     public ClusterSettings() {
 
+    }
+
+    public int getNumNodes() {
+        return numNodes;
+    }
+
+    public void setNumNodes(int numNodes) {
+        this.numNodes = numNodes;
     }
 
     public String getName() {

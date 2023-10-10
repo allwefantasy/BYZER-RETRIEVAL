@@ -26,10 +26,10 @@ public class RetrievalGateway {
         this.clusterInfos = new ArrayList<>();
     }
 
-    public boolean buildCluster(String clusterSettingsStr, String tableSettingsStr, String envSettingsStr, String JVMSettingsStr) throws Exception {
+    public boolean buildCluster(String clusterSettingsStr, String envSettingsStr, String JVMSettingsStr) throws Exception {
 
         var clusterSettings = toRecord(clusterSettingsStr, ClusterSettings.class);
-        var tableSettings = toRecord(tableSettingsStr, TableSettings.class);
+
         var envSettings = toRecord(envSettingsStr, EnvSettings.class);
         // --enable-preview --add-modules jdk.incubator.vector
         var jvmSettings = toRecord(JVMSettingsStr, JVMSettings.class);
@@ -58,8 +58,8 @@ public class RetrievalGateway {
         envMap.put("PATH", envSettings.path());
         runtimeEnv.set(RuntimeEnvName.ENV_VARS, envMap);
 
-        var clusterInfo = new ClusterInfo(clusterSettings, tableSettings, jvmSettings, envSettings);
-
+        var clusterInfo = new ClusterInfo(clusterSettings, jvmSettings, envSettings);
+        
         Ray.actor(RetrievalMaster::new, clusterInfo).
                 setName(clusterSettings.name()).
                 setLifetime(ActorLifetime.DETACHED).

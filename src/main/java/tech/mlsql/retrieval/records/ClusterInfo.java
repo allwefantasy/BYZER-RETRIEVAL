@@ -1,6 +1,8 @@
 package tech.mlsql.retrieval.records;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 10/8/23 WilliamZhu(allwefantasy@gmail.com)
@@ -10,13 +12,13 @@ import java.io.Serializable;
 
 public class ClusterInfo implements Serializable {
     private ClusterSettings clusterSettings;
-    private TableSettings tableSettings;
     private JVMSettings jvmSettings;
     private EnvSettings envSettings;
 
-    public ClusterInfo(ClusterSettings clusterSettings, TableSettings tableSettings, JVMSettings jvmSettings, EnvSettings envSettings) {
+    private List<TableSettings> tableSettingsList = new ArrayList<>();
+
+    public ClusterInfo(ClusterSettings clusterSettings, JVMSettings jvmSettings, EnvSettings envSettings) {
         this.clusterSettings = clusterSettings;
-        this.tableSettings = tableSettings;
         this.jvmSettings = jvmSettings;
         this.envSettings = envSettings;
     }
@@ -32,13 +34,6 @@ public class ClusterInfo implements Serializable {
         this.clusterSettings = clusterSettings;
     }
 
-    public TableSettings getTableSettings() {
-        return tableSettings;
-    }
-
-    public void setTableSettings(TableSettings tableSettings) {
-        this.tableSettings = tableSettings;
-    }
 
     public JVMSettings getJvmSettings() {
         return jvmSettings;
@@ -60,8 +55,12 @@ public class ClusterInfo implements Serializable {
         return clusterSettings;
     }
 
-    public TableSettings tableSettings() {
-        return tableSettings;
+    public List<TableSettings> tableSettingsList() {
+        return tableSettingsList;
+    }
+
+    public void addTableSettings(TableSettings tableSettings) {
+        this.tableSettingsList.add(tableSettings);
     }
 
     public JVMSettings jvmSettings() {

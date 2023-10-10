@@ -28,14 +28,9 @@ public class RetrievalWorker {
     private ClusterSettings clusterSettings;
     private List<Searcher> tableSeacherList;
 
-    public RetrievalWorker(ClusterSettings clusterSettings, TableSettings tableSettings) {
+    public RetrievalWorker(ClusterSettings clusterSettings) {
         this.clusterSettings = clusterSettings;
         this.tableSeacherList = new ArrayList<>();
-        try {
-            this.createTable(tableSettings);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     public boolean createTable(TableSettings tableSettings) throws Exception {

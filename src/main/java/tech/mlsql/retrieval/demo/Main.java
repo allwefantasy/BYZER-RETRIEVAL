@@ -43,13 +43,15 @@ public class Main {
 
         FileUtils.deleteDirectory(new File("/tmp/cluster1"));
         var worker = new RetrievalWorker(
-                new ClusterSettings("cluster1", "/tmp/cluster1"),
-                new TableSettings("db1",
-                        "table1",
-                        "st(field(_id,long),field(name,string),field(content,string,analyze),field(vector,array(float)))",
-                        null,
-                        1)
+                new ClusterSettings("cluster1", "/tmp/cluster1",1)
         );
+
+        worker.createTable(new TableSettings("db1",
+                "table1",
+                "st(field(_id,long),field(name,string),field(content,string,analyze),field(vector,array(float)))",
+                null,
+                1));
+        
         worker.build("db1", "table1", "/tmp/data");
 
         var query = new SearchQuery(
