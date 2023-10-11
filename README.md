@@ -311,6 +311,14 @@ ray.get(v)
 ## The output: '[{"name":"d","_id":2,"_score":0.31506687,"content":"b e"}]'
 ```
 
+## Todo List
+
+[x] Python API
+[] Byzer-SQL API
+[] Rest API (based on Ray serve)
+[] Restore Cluster (The users may create many clusters,and may want to shut down for the resource saving and restore it later)
+ 
+
 
 
 
