@@ -313,10 +313,10 @@ ray.get(v)
 
 ## Todo List
 
-[x] Python API
-[] Byzer-SQL API
-[] Rest API (based on Ray serve)
-[] Restore Cluster (The users may create many clusters,and may want to shut down for the resource saving and restore it later)
+1. [+] Python API
+2. [-] Byzer-SQL API
+3. [-] Rest API (based on Ray serve)
+4. [-] Restore Cluster (The users may create many clusters,and may want to shut down for the resource saving and restore it later)
  
 
 
