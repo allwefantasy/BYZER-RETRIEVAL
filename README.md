@@ -316,7 +316,7 @@ ray.get(v)
 1. [+] Python API
 2. [-] Byzer-SQL API
 3. [-] Rest API (based on Ray serve)
-4. [-] Cluster Restore( only works the storage is shared file system. The scenario is that the cluster is down and we need to restore the cluster from the storage.)
+4. [-] Cluster Restore(The scenario is that the cluster is down, we need to restore the cluster from the storage.)
 5. [-] Resource Management (e.g. CPU, Memory, GPU)
  
 
