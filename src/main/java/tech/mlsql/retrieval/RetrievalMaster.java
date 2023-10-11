@@ -32,7 +32,7 @@ public class RetrievalMaster {
 
         for (int i = 0; i < clusterSettings.getNumNodes(); i++) {
             workers.add(
-                    Ray.actor(RetrievalWorker::new, clusterSettings).
+                    Ray.actor(RetrievalWorker::new, clusterSettings,i).
                             setName(clusterSettings.name() + "-worker").
                             setRuntimeEnv(runtimeEnv).
                             setJvmOptions(clusterInfo.jvmSettings().options())
@@ -81,13 +81,8 @@ public class RetrievalMaster {
             var data = Utils.toRecord(row, Map.class);
             if (data.containsKey("_id")) {
                 var id = data.get("_id");
-                if (id instanceof Long) {
-                    Long shardId = (Long) id % workers.size();
-                    batchDataShards.get(shardId.intValue()).add(objRef);
-                } else {
-                    var shardId = id.toString().hashCode() % workers.size();
-                    batchDataShards.get(shardId).add(objRef);
-                }
+                var shardId = Utils.route(id, workers.size());
+                batchDataShards.get(shardId).add(objRef);
             } else {
                 throw new Exception("The data does not contain _id field");
             }

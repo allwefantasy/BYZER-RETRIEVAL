@@ -108,19 +108,20 @@ public class Utils {
 
     public static <T> ObjectRefImpl<T> objectRefConvert(ObjectRef<T> obj) {
         if (obj instanceof ObjectRefImpl) {
-            return (ObjectRefImpl<T>)obj;
+            return (ObjectRefImpl<T>) obj;
         } else {
             throw new RuntimeException(obj.getClass() + " is not ObjectRefImpl");
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        var json = """
-                {
-                  "name": "test"
-                }
-                """;
-        var t = toRecord(json, ClusterSettings.class);
-        System.out.println(t.name());
+    public static int route(Object id, int numWorkers) {
+        Long shardId = 0l;
+        if (id instanceof Long) {
+            shardId = (long)id % numWorkers;
+        } else {
+            shardId = (long) (id.toString().hashCode() % numWorkers);
+        }
+        return shardId.intValue();
     }
+
 }

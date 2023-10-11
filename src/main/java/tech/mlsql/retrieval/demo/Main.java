@@ -43,7 +43,7 @@ public class Main {
 
         FileUtils.deleteDirectory(new File("/tmp/cluster1"));
         var worker = new RetrievalWorker(
-                new ClusterSettings("cluster1", "/tmp/cluster1",1)
+                new ClusterSettings("cluster1", "/tmp/cluster1",1),0
         );
 
         worker.createTable(new TableSettings("db1",

@@ -26,15 +26,15 @@ public class SimpleSchemaParser {
     // to StructType(List(StructField(name,string),StructField(name1,StructType(List(StructField(name2,ArrayType(StringType,true),true,Map()))),true,Map()))))
     public static StructType parse(String schemaStr) {
         StructType root = new StructType(new ArrayList<>());
-        return (StructType) _parse(schemaStr, root);
+        return (StructType) _parse(trimWhiteSpaceAndNewLine(schemaStr), root);
     }
 
-    public static void main(String[] args) {
-        System.out.println(parse("st(field(name,string),field(name1,st(field(name2,array(string)))),field(name2,map(string,string)))"));
-        System.out.println(parse("st(field(name,string,analyze))"));
+    private static String trimWhiteSpaceAndNewLine(String input) {
+        return input.trim().replaceAll("\n","");
     }
 
-    public static DataType _parse(String schemaStr, StructType structType) {
+    public static DataType _parse(String _schemaStr, StructType structType) {
+        var schemaStr = _schemaStr.trim();
         if (startWith(schemaStr, "boolean")) {
             return new SingleType(schemaStr);
         } else if (startWith(schemaStr, "byte")) {

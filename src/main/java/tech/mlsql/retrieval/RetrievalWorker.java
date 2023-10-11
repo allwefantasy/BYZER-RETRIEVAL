@@ -28,16 +28,25 @@ public class RetrievalWorker {
     private ClusterSettings clusterSettings;
     private List<Searcher> tableSeacherList;
 
-    public RetrievalWorker(ClusterSettings clusterSettings) {
+    private int workerId;
+
+    public RetrievalWorker(ClusterSettings clusterSettings,int workerId) {
         this.clusterSettings = clusterSettings;
         this.tableSeacherList = new ArrayList<>();
+        this.workerId = workerId;
     }
 
     public boolean createTable(TableSettings tableSettings) throws Exception {
 
         IndexWriterConfig writerConfig = new IndexWriterConfig(new WhitespaceAnalyzer());
 
-        Path indexLocation = Paths.get(clusterSettings.location(), tableSettings.database(), tableSettings.table());
+        // with the worker id, we can use shared file system
+        // to avoid different worker write to the same index location
+        Path indexLocation = Paths.get(clusterSettings.location(),
+                tableSettings.database(),
+                tableSettings.table(),
+                String.valueOf(workerId));
+
         NIOFSDirectory niofsDirectory = new NIOFSDirectory(indexLocation);
         writerConfig.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
         IndexWriter indexWriter = new IndexWriter(niofsDirectory, writerConfig);
