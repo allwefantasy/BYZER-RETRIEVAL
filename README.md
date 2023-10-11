@@ -140,7 +140,45 @@ byzer.search_vector("cluster1","db1","table1",
 ## output: [{'name': 'a', '_id': 1, '_score': 1.0, 'content': 'b c'},{'name': 'd', '_id': 2, '_score': 0.9989467, 'content': 'b e'}]                    
 ```
 
+## Table Schema Description
 
+We introduce a new schema language to describe the table schema.
+
+```
+st(
+ field(_id,long),
+ field(name,string),
+ field(content,string,analyze),
+ field(vector,array(float))
+)
+```
+st means Struct, field means Field,the first value in field is columnName,and the second is type,
+the third is analyze, and it is optional. If you want to analyze the field when indexing, you can set the third value as
+`analyze`.
+
+For now, simple schema supports type like following:
+
+1. st
+2. field
+3. string
+4. float
+5. double
+6. integer
+7. short
+8. date
+9. binary
+10. map
+11. array
+12. long
+13. boolean
+14. byte
+15. decimal
+
+st also supports nesting:
+
+```sql
+st(field(column1,map(string,array(st(field(columnx,string))))))
+```
 
 ## Usage (low-level Python API)
 
