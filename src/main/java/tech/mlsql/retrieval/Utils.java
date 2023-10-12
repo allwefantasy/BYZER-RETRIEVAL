@@ -11,10 +11,9 @@ import io.ray.runtime.object.ObjectRefImpl;
 import org.apache.lucene.document.Document;
 import tech.mlsql.retrieval.records.ClusterSettings;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
 
 public class Utils {
     public static <T> T toRecord(String json, Class<T> recordClass) throws JsonProcessingException {
@@ -122,6 +121,26 @@ public class Utils {
             shardId = (long) (id.toString().hashCode() % numWorkers);
         }
         return shardId.intValue();
+    }
+
+    // for test
+    public static void writeExceptionToFile(Exception e) {
+        // write exception to file
+        var uuid = UUID.randomUUID().toString();
+        var exceptionFile = Paths.get(String.format("/tmp/exception-%s.txt", uuid));
+        // convert exception to string
+        var exceptionString = new StringBuilder();
+        exceptionString.append(e.getMessage());
+        exceptionString.append("\n");
+        for (var stackTraceElement : e.getStackTrace()) {
+            exceptionString.append(stackTraceElement.toString());
+            exceptionString.append("\n");
+        }
+        try {
+            Files.writeString(exceptionFile, exceptionString.toString());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
 }

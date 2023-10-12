@@ -4,8 +4,11 @@ import io.ray.api.ObjectRef;
 import io.ray.api.Ray;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.document.LongField;
+import org.apache.lucene.document.LongPoint;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.simple.SimpleQueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.NIOFSDirectory;
@@ -30,11 +33,11 @@ public class RetrievalWorker {
 
     private int workerId;
 
-    public RetrievalWorker(ClusterInfo clusterInfo,int workerId) {
+    public RetrievalWorker(ClusterInfo clusterInfo, int workerId) {
         this.clusterInfo = clusterInfo;
         this.tableSeacherList = new ArrayList<>();
         this.workerId = workerId;
-        for(var tableSettings : clusterInfo.getTableSettingsList()) {
+        for (var tableSettings : clusterInfo.getTableSettingsList()) {
             try {
                 createTable(tableSettings);
             } catch (Exception e) {
@@ -48,9 +51,9 @@ public class RetrievalWorker {
     }
 
     public String getNode() {
-        var nodes =  Ray.getRuntimeContext().getAllNodeInfo();
+        var nodes = Ray.getRuntimeContext().getAllNodeInfo();
         var currentNodeId = Ray.getRuntimeContext().getCurrentNodeId();
-        var currentNode =  nodes.stream().filter(f -> f.nodeId.equals(currentNodeId)).findFirst().get();
+        var currentNode = nodes.stream().filter(f -> f.nodeId.equals(currentNodeId)).findFirst().get();
         return currentNode.nodeAddress;
     }
 
@@ -141,7 +144,12 @@ public class RetrievalWorker {
                 }
                 doc.add(SimpleSchemaParser.toLuceneField(field, value));
             }
-            indexWriter.addDocument(doc);
+            if(data.get("_id")  instanceof Long) {
+                indexWriter.updateDocuments(LongPoint.newExactQuery("_id",(Long)data.get("_id")),List.of(doc));
+            } else {
+                indexWriter.updateDocument(new Term("_id",data.get("_id").toString()),doc);
+            }
+
         }
         return true;
     }
@@ -158,7 +166,8 @@ public class RetrievalWorker {
 
         try {
             // convert fields to map<String,Float>
-            var queryFields = query.fields().stream().map(f -> Map.entry(f, 1.0f)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            var queryFields = query.fields().stream().map(f -> Map.entry(f, 1.0f)).
+                    collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
 
             BooleanQuery.Builder builder = new BooleanQuery.Builder();
@@ -197,7 +206,13 @@ public class RetrievalWorker {
     }
 
     public long commit(String database, String table) throws Exception {
-        var searcher = getSearcher(database,table);
-        return searcher.indexWriter().commit();
+        var searcher = getSearcher(database, table);
+        try {
+            return searcher.indexWriter().commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Utils.writeExceptionToFile(e);
+            return -1;
+        }
     }
 }
