@@ -83,6 +83,8 @@ public class RetrievalGateway {
         return true;
     }
 
+    // Notice that when restore the cluster, we need the worker location(which ip the worker is running on).
+    // if the cluster use local disk instead of shared file system, then the worker location is not needed.
     public boolean restoreFromClusterInfo(String clusterInfoStr) throws Exception {
         var clusterInfo = toRecord(clusterInfoStr, ClusterInfo.class);
         var clusterSettings = clusterInfo.clusterSettings();

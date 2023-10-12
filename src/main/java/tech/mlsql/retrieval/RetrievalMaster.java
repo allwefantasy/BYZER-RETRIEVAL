@@ -32,7 +32,7 @@ public class RetrievalMaster {
         runtimeEnv.set(RuntimeEnvName.ENV_VARS, envMap);
 
         for (int i = 0; i < clusterSettings.getNumNodes(); i++) {
-            var actor = Ray.actor(RetrievalWorker::new, clusterSettings, i);
+            var actor = Ray.actor(RetrievalWorker::new, clusterInfo, i);
             actor.setName(clusterSettings.name() + "-worker").
                     setRuntimeEnv(runtimeEnv).
                     setJvmOptions(clusterInfo.jvmSettings().options());
@@ -74,6 +74,7 @@ public class RetrievalMaster {
             tasks.add(ref);
         }
         Ray.get(tasks);
+        this.clusterInfo.tableSettingsList().add(tableSettings);
         return true;
     }
 

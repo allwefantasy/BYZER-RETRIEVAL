@@ -25,15 +25,22 @@ import static java.lang.StringTemplate.STR;
  * 10/6/23 WilliamZhu(allwefantasy@gmail.com)
  */
 public class RetrievalWorker {
-    private ClusterSettings clusterSettings;
+    private ClusterInfo clusterInfo;
     private List<Searcher> tableSeacherList;
 
     private int workerId;
 
-    public RetrievalWorker(ClusterSettings clusterSettings,int workerId) {
-        this.clusterSettings = clusterSettings;
+    public RetrievalWorker(ClusterInfo clusterInfo,int workerId) {
+        this.clusterInfo = clusterInfo;
         this.tableSeacherList = new ArrayList<>();
         this.workerId = workerId;
+        for(var tableSettings : clusterInfo.getTableSettingsList()) {
+            try {
+                createTable(tableSettings);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public int getWorkerId() {
@@ -53,7 +60,7 @@ public class RetrievalWorker {
 
         // with the worker id, we can use shared file system
         // to avoid different worker write to the same index location
-        Path indexLocation = Paths.get(clusterSettings.location(),
+        Path indexLocation = Paths.get(clusterInfo.getClusterSettings().location(),
                 tableSettings.database(),
                 tableSettings.table(),
                 String.valueOf(workerId));

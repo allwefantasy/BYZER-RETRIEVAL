@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import tech.mlsql.retrieval.RetrievalWorker;
 import tech.mlsql.retrieval.Utils;
+import tech.mlsql.retrieval.records.ClusterInfo;
 import tech.mlsql.retrieval.records.ClusterSettings;
 import tech.mlsql.retrieval.records.SearchQuery;
 import tech.mlsql.retrieval.records.TableSettings;
@@ -42,8 +43,14 @@ public class Main {
         }
 
         FileUtils.deleteDirectory(new File("/tmp/cluster1"));
+        var clusterInfo = new ClusterInfo(
+                new ClusterSettings("cluster1", "/tmp/cluster1", 1),
+                null,
+                null,
+                null
+        );
         var worker = new RetrievalWorker(
-                new ClusterSettings("cluster1", "/tmp/cluster1",1),0
+                clusterInfo,0
         );
 
         worker.createTable(new TableSettings("db1",
