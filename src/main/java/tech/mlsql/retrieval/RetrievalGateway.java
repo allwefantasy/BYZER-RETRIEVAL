@@ -26,7 +26,7 @@ public class RetrievalGateway {
         this.clusterInfos = new ArrayList<>();
     }
 
-    public boolean buildCluster(String clusterSettingsStr, String envSettingsStr, String JVMSettingsStr, String resourceRequirementSettingsStr ) throws Exception {
+    public boolean buildCluster(String clusterSettingsStr, String envSettingsStr, String JVMSettingsStr, String resourceRequirementSettingsStr) throws Exception {
 
         var clusterSettings = toRecord(clusterSettingsStr, ClusterSettings.class);
 
@@ -61,14 +61,19 @@ public class RetrievalGateway {
         runtimeEnv.set(RuntimeEnvName.ENV_VARS, envMap);
 
         var resourceRequirementSettings = Utils.toRecord(resourceRequirementSettingsStr, ResourceRequirementSettings.class);
-        var clusterInfo = new ClusterInfo(clusterSettings, jvmSettings, envSettings,resourceRequirementSettings);
-        
-        Ray.actor(RetrievalMaster::new, clusterInfo).
+        var clusterInfo = new ClusterInfo(clusterSettings, jvmSettings, envSettings, resourceRequirementSettings);
+
+        var actor = Ray.actor(RetrievalMaster::new, clusterInfo).
                 setName(clusterSettings.name()).
                 setLifetime(ActorLifetime.DETACHED).
                 setRuntimeEnv(runtimeEnv).
-                setJvmOptions(jvmSettings.options()).
-                remote();
+                setJvmOptions(jvmSettings.options());
+
+        for (var item : clusterInfo.getResourceRequirementSettings().getResourceRequirements()) {
+            actor.setResource(item.getName(), item.getResourceQuantity());
+        }
+
+        actor.remote();
 
         this.clusterInfos.add(clusterInfo);
 
