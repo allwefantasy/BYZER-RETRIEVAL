@@ -151,6 +151,80 @@ byzer.search_vector("cluster1","db1","table1",
 ## output: [{'name': 'a', '_id': 1, '_score': 1.0, 'content': 'b c'},{'name': 'd', '_id': 2, '_score': 0.9989467, 'content': 'b e'}]                    
 ```
 
+You can also do follow operations to the table:
+
+1. truncate: delete all data in the table
+2. close: close the table and release the resources
+3. closeAndDeleteFile: close the table and delete the index files
+
+```python
+byzer.truncate("cluster1","db1","table1")
+byzer.close("cluster1","db1","table1")
+byzer.closeAndDeleteFile("cluster1","db1","table1")
+```
+
+
+## Cluster Recovery
+
+When the Retrieval Cluster  is crash or the Ray Cluster is down, we need to recover our cluster. You can mannually
+export cluster metadata, and then save it to the storage. Try to use the following code to export the metadata:
+
+```python
+cluster = byzer.cluster("cluster1")
+cluster1_meta = json.loads(ray.get(cluster.clusterInfo.remote()))
+# save s to file
+with open("/tmp/cluster_info.json","w") as f:
+    json.dump(cluster1_meta,f,ensure_ascii=False)
+```
+
+Then you can use the following code to recover the cluster once the cluster is down:
+
+```python
+import json
+import os
+import ray
+from byzerllm.records import EnvSettings,ClusterSettings,TableSettings,JVMSettings
+from byzerllm.utils.retrieval import ByzerRetrieval
+
+with open("/tmp/cluster_info.json","r") as f:
+    s = json.load(f)
+
+byzer = ByzerRetrieval()
+byzer.launch_gateway()
+byzer.restore_from_cluster_info(s)
+```
+
+Notice that if the Ray Cluster is down, you need to connect it Ray cluster first, and then restore the retrieval cluster.
+
+```python
+import json
+import os
+import ray
+from byzerllm.records import EnvSettings,ClusterSettings,TableSettings,JVMSettings
+from byzerllm.utils.retrieval import ByzerRetrieval
+
+with open("/tmp/cluster_info.json","r") as f:
+    s = json.load(f)
+
+code_search_path=["/home/winubuntu/softwares/byzer-retrieval-lib/"]
+env_vars = {"JAVA_HOME": s["envSettings"]["javaHome"],
+            "PATH":s["envSettings"]["path"]}
+
+ray.init(address="auto",namespace="default",
+                 job_config=ray.job_config.JobConfig(code_search_path=code_search_path,
+                                                      runtime_env={"env_vars": env_vars})
+                 )
+
+byzer = ByzerRetrieval()
+byzer.launch_gateway()
+byzer.restore_from_cluster_info(s)
+
+```
+
+## Rest API
+
+todo
+
 ## Table Schema Description
 
 We introduce a new schema language to describe the table schema.
@@ -327,7 +401,7 @@ ray.get(v)
 1. [+] Python API
 2. [-] Byzer-SQL API
 3. [-] Rest API (based on Ray serve)
-4. [-] Cluster Restore(The scenario is that the cluster is down, we need to restore the cluster from the storage.)
+4. [+] Cluster Recovery(The scenario is that the cluster is down, we need to restore the cluster from the storage.)
 5. [-] Resource Management (e.g. CPU, Memory, GPU)
  
 

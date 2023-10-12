@@ -53,7 +53,7 @@ public class RetrievalMaster {
 
         // new cluster, not restore from checkpoint
         // try to get worker location from worker actor
-        if(clusterInfo.getWorkerLocations().isEmpty()) {
+        if (clusterInfo.getWorkerLocations().isEmpty()) {
             for (int i = 0; i < clusterSettings.getNumNodes(); i++) {
                 var worker = workers.get(i);
                 clusterInfo.addWorkerLocation(i, Ray.get(worker.task(RetrievalWorker::getNode).remote()));
@@ -152,6 +152,36 @@ public class RetrievalMaster {
         var tasks = new ArrayList<ObjectRef<Long>>();
         for (var worker : this.workers) {
             var ref = worker.task(RetrievalWorker::commit, database, table).remote();
+            tasks.add(ref);
+        }
+        Ray.get(tasks);
+        return true;
+    }
+
+    public boolean truncate(String database, String table) throws Exception {
+        var tasks = new ArrayList<ObjectRef<Boolean>>();
+        for (var worker : this.workers) {
+            var ref = worker.task(RetrievalWorker::truncate, database, table).remote();
+            tasks.add(ref);
+        }
+        Ray.get(tasks);
+        return true;
+    }
+
+    public boolean close(String database, String table) throws Exception {
+        var tasks = new ArrayList<ObjectRef<Boolean>>();
+        for (var worker : this.workers) {
+            var ref = worker.task(RetrievalWorker::close, database, table).remote();
+            tasks.add(ref);
+        }
+        Ray.get(tasks);
+        return true;
+    }
+
+    public boolean closeAndDeleteFile(String database, String table) throws Exception {
+        var tasks = new ArrayList<ObjectRef<Boolean>>();
+        for (var worker : this.workers) {
+            var ref = worker.task(RetrievalWorker::closeAndDeleteFile, database, table).remote();
             tasks.add(ref);
         }
         Ray.get(tasks);

@@ -2,6 +2,7 @@ package tech.mlsql.retrieval;
 
 import io.ray.api.ObjectRef;
 import io.ray.api.Ray;
+import org.apache.commons.io.FileUtils;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.LongField;
@@ -144,10 +145,11 @@ public class RetrievalWorker {
                 }
                 doc.add(SimpleSchemaParser.toLuceneField(field, value));
             }
-            if(data.get("_id")  instanceof Long) {
-                indexWriter.updateDocuments(LongPoint.newExactQuery("_id",(Long)data.get("_id")),List.of(doc));
+            if (doc.getField("_id") instanceof LongField) {
+                LongField longField = (LongField) doc.getField("_id");
+                indexWriter.updateDocuments(LongField.newExactQuery("_id", (Long) longField.numericValue()), List.of(doc));
             } else {
-                indexWriter.updateDocument(new Term("_id",data.get("_id").toString()),doc);
+                indexWriter.updateDocument(new Term("_id", data.get("_id").toString()), doc);
             }
 
         }
@@ -214,5 +216,40 @@ public class RetrievalWorker {
             // Utils.writeExceptionToFile(e);
             return -1;
         }
+    }
+
+    public boolean truncate(String database, String table) throws Exception{
+        var searcher = getSearcher(database, table);
+        try {
+            searcher.indexWriter().deleteAll();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Utils.writeExceptionToFile(e);
+            return false;
+        }
+
+    }
+
+    public boolean close(String database, String table) throws Exception {
+        var searcher = getSearcher(database, table);
+        try {
+            searcher.searcherManager().close();
+            searcher.indexWriter().close();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Utils.writeExceptionToFile(e);
+            return false;
+        }
+    }
+
+    public boolean closeAndDeleteFile(String database, String table) throws Exception {
+        close(database, table);
+        FileUtils.deleteDirectory(Paths.get(clusterInfo.getClusterSettings().location(),
+                database,
+                table,
+                String.valueOf(workerId)).toFile());
+        return true;
     }
 }
