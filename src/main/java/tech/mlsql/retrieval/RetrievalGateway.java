@@ -26,7 +26,10 @@ public class RetrievalGateway {
         this.clusterInfos = new ArrayList<>();
     }
 
-    public boolean buildCluster(String clusterSettingsStr, String envSettingsStr, String JVMSettingsStr, String resourceRequirementSettingsStr) throws Exception {
+    public boolean buildCluster(String clusterSettingsStr,
+                                String envSettingsStr,
+                                String JVMSettingsStr,
+                                String resourceRequirementSettingsStr) throws Exception {
 
         var clusterSettings = toRecord(clusterSettingsStr, ClusterSettings.class);
 

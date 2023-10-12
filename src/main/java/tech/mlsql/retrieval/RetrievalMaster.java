@@ -62,6 +62,10 @@ public class RetrievalMaster {
         this.clusterInfo = clusterInfo;
     }
 
+    public String clusterInfo() throws Exception {
+        return Utils.toJson(clusterInfo);
+    }
+
     public boolean createTable(String tableSettingStr) throws Exception {
         var tableSettings = Utils.toRecord(tableSettingStr, TableSettings.class);
         var tasks = new ArrayList<ObjectRef<Boolean>>();
