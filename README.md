@@ -402,7 +402,7 @@ ray.get(v)
 2. [-] Byzer-SQL API
 3. [-] Rest API (based on Ray serve)
 4. [+] Cluster Recovery(The scenario is that the cluster is down, we need to restore the cluster from the storage.)
-5. [-] Resource Management (e.g. CPU, Memory, GPU)
+5. [+] Resource Management (e.g. CPU, Memory, GPU)
  
 
 
