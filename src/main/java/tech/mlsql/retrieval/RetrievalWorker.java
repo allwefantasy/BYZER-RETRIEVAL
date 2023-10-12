@@ -36,6 +36,17 @@ public class RetrievalWorker {
         this.workerId = workerId;
     }
 
+    public int getWorkerId() {
+        return this.workerId;
+    }
+
+    public String getNode() {
+        var nodes =  Ray.getRuntimeContext().getAllNodeInfo();
+        var currentNodeId = Ray.getRuntimeContext().getCurrentNodeId();
+        var currentNode =  nodes.stream().filter(f -> f.nodeId.equals(currentNodeId)).findFirst().get();
+        return currentNode.nodeAddress;
+    }
+
     public boolean createTable(TableSettings tableSettings) throws Exception {
 
         IndexWriterConfig writerConfig = new IndexWriterConfig(new WhitespaceAnalyzer());

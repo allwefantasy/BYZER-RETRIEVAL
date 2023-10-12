@@ -2,7 +2,9 @@ package tech.mlsql.retrieval.records;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 10/8/23 WilliamZhu(allwefantasy@gmail.com)
@@ -15,13 +17,56 @@ public class ClusterInfo implements Serializable {
     private JVMSettings jvmSettings;
     private EnvSettings envSettings;
 
+    private ResourceRequirementSettings resourceRequirementSettings;
+
     private List<TableSettings> tableSettingsList = new ArrayList<>();
 
-    public ClusterInfo(ClusterSettings clusterSettings, JVMSettings jvmSettings, EnvSettings envSettings) {
+
+    // this is a map from worker index to worker location(e.g. ip).
+    // it's used to restore worker when the cluster is restarted.
+    // so there is no need to set it in constructor.
+    private Map<Integer,String> workerLocations = new HashMap<>();
+
+
+
+    public ClusterInfo(ClusterSettings clusterSettings,
+                       JVMSettings jvmSettings,
+                       EnvSettings envSettings,
+                       ResourceRequirementSettings resourceRequirementSettings ) {
         this.clusterSettings = clusterSettings;
         this.jvmSettings = jvmSettings;
         this.envSettings = envSettings;
+        this.resourceRequirementSettings = resourceRequirementSettings;
     }
+
+    public Map<Integer,String> getWorkerLocations() {
+        return workerLocations;
+    }
+
+    public void setWorkerLocations(Map<Integer,String> workerLocations) {
+        this.workerLocations = workerLocations;
+    }
+
+    public void addWorkerLocation(int workerIndex, String workerLocation) {
+        this.workerLocations.put(workerIndex, workerLocation);
+    }
+
+    public ResourceRequirementSettings getResourceRequirementSettings() {
+        return resourceRequirementSettings;
+    }
+
+    public void setResourceRequirementSettings(ResourceRequirementSettings resourceRequirementSettings) {
+        this.resourceRequirementSettings = resourceRequirementSettings;
+    }
+
+    public List<TableSettings> getTableSettingsList() {
+        return tableSettingsList;
+    }
+
+    public void setTableSettingsList(List<TableSettings> tableSettingsList) {
+        this.tableSettingsList = tableSettingsList;
+    }
+    
 
     public ClusterInfo() {
     }

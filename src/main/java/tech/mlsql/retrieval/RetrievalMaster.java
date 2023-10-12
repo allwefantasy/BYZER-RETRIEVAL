@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
  */
 public class RetrievalMaster {
     private List<ActorHandle<RetrievalWorker>> workers = new ArrayList<>();
+    private ClusterInfo clusterInfo;
 
     public RetrievalMaster(ClusterInfo clusterInfo) {
         var clusterSettings = clusterInfo.clusterSettings();
@@ -31,13 +32,34 @@ public class RetrievalMaster {
         runtimeEnv.set(RuntimeEnvName.ENV_VARS, envMap);
 
         for (int i = 0; i < clusterSettings.getNumNodes(); i++) {
-            workers.add(
-                    Ray.actor(RetrievalWorker::new, clusterSettings,i).
-                            setName(clusterSettings.name() + "-worker").
-                            setRuntimeEnv(runtimeEnv).
-                            setJvmOptions(clusterInfo.jvmSettings().options())
-                            .remote());
+            var actor = Ray.actor(RetrievalWorker::new, clusterSettings, i);
+            actor.setName(clusterSettings.name() + "-worker").
+                    setRuntimeEnv(runtimeEnv).
+                    setJvmOptions(clusterInfo.jvmSettings().options());
+
+
+            for (var entry : clusterInfo.getResourceRequirementSettings().getResourceRequirements()) {
+                actor.setResource(entry.getName(), entry.getResourceQuantity());
+            }
+
+            // if the worker location is not null, then set the worker location
+            // to force the worker to run on the specified node.
+            if (clusterInfo.getWorkerLocations().containsKey(i)) {
+                actor.setResource("node:" + clusterInfo.getWorkerLocations().get(i), 1.0);
+            }
+
+            workers.add(actor.remote());
         }
+
+        // new cluster, not restore from checkpoint
+        // try to get worker location from worker actor
+        if(clusterInfo.getWorkerLocations().isEmpty()) {
+            for (int i = 0; i < clusterSettings.getNumNodes(); i++) {
+                var worker = workers.get(i);
+                clusterInfo.addWorkerLocation(i, Ray.get(worker.task(RetrievalWorker::getNode).remote()));
+            }
+        }
+        this.clusterInfo = clusterInfo;
     }
 
     public boolean createTable(String tableSettingStr) throws Exception {
@@ -62,7 +84,7 @@ public class RetrievalMaster {
         return true;
     }
 
-    public boolean buildFromRayObjectStore(String database, String table, byte[][] batchData,byte[][] locations) throws Exception {
+    public boolean buildFromRayObjectStore(String database, String table, byte[][] batchData, byte[][] locations) throws Exception {
         var tasks = new ArrayList<ObjectRef<Boolean>>();
         // split batchData to shards, which the number of shards is equal to the number of workers
         var batchDataShards = new ArrayList<List<ObjectRef<String>>>();
@@ -74,7 +96,7 @@ public class RetrievalMaster {
             // get record from ray object store
             var objRefId = batchData[i];
             var location = locations[i];
-            var objRef = Utils.readBinaryAsObjectRef(objRefId,String.class,location);
+            var objRef = Utils.readBinaryAsObjectRef(objRefId, String.class, location);
             var row = Ray.get(objRef);
 
             // deserialize record json string to map

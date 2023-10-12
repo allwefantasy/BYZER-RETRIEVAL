@@ -16,11 +16,24 @@ and foreign memory will bring a great performance improvement to the system.
 1. Ray cluster == 2.7.0
 2. JDK 21 or higher
 3. Python 3.10.11
-4. byzerllm >= 0.1.5 (python package) 
+4. byzerllm >= 0.1.6 (python package) 
 
 ## Deploy
 
-Clone this project and build the jar file and dependency:
+### Deploy Ray Cluster
+
+Clone this project.
+
+
+```
+conda create -n byzer-retrieval python=3.10.11
+conda activate byzer-retrieval
+pip install -r requirements.txt
+
+ray start --head  --dashboard-host 0.0.0.0
+```
+
+Build the jar file and dependency:
 
 ```
 mvn clean package -DskipTests
@@ -29,8 +42,6 @@ mvn dependency:copy-dependencies -DoutputDirectory=target/dependency
 
 Then copy the jar file and dependency to the ray cluster. Suppose you put
 all the jars in `/home/winubuntu/softwares/byzer-retrieval-lib/`.
-
-Also make sure `byzerllm` is installed in your python environment of ray cluster.
 
 That's all.
 
