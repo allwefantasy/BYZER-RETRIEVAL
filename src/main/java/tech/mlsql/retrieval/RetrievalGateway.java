@@ -83,6 +83,56 @@ public class RetrievalGateway {
         return true;
     }
 
+    public boolean restoreFromClusterInfo(String clusterInfoStr) throws Exception {
+        var clusterInfo = toRecord(clusterInfoStr, ClusterInfo.class);
+        var clusterSettings = clusterInfo.clusterSettings();
+
+        var envSettings = clusterInfo.envSettings();
+        // --enable-preview --add-modules jdk.incubator.vector
+        var jvmSettings = clusterInfo.getJvmSettings();
+
+
+        if (jvmSettings.options().isEmpty()) {
+            jvmSettings.options().addAll(Utils.defaultJvmOptions());
+        }
+
+        if (!jvmSettings.options().contains("--enable-preview")) {
+            jvmSettings.options().add("--enable-preview");
+        }
+
+        if (!jvmSettings.options().contains("jdk.incubator.vector")) {
+            jvmSettings.options().add("--add-modules");
+            jvmSettings.options().add("jdk.incubator.vector");
+        }
+
+//        //--add-modules jdk.incubator.foreign
+//        if (!jvmSettings.options().contains("jdk.incubator.foreign")) {
+//            jvmSettings.options().add("--add-modules");
+//            jvmSettings.options().add("jdk.incubator.foreign");
+//        }
+
+        var runtimeEnv = new RuntimeEnv.Builder().build();
+        Map<String, String> envMap = new HashMap<>();
+        envMap.put("JAVA_HOME", envSettings.javaHome());
+        envMap.put("PATH", envSettings.path());
+        runtimeEnv.set(RuntimeEnvName.ENV_VARS, envMap);
+
+        var actor = Ray.actor(RetrievalMaster::new, clusterInfo).
+                setName(clusterSettings.name()).
+                setLifetime(ActorLifetime.DETACHED).
+                setRuntimeEnv(runtimeEnv).
+                setJvmOptions(jvmSettings.options());
+
+        for (var item : clusterInfo.getResourceRequirementSettings().getResourceRequirements()) {
+            actor.setResource(item.getName(), item.getResourceQuantity());
+        }
+
+        actor.remote();
+
+        this.clusterInfos.add(clusterInfo);
+        return true;
+    }
+
     public ActorHandle<RetrievalMaster> getCluster(String clusterName) {
         return (ActorHandle<RetrievalMaster>) Ray.getActor(clusterName).get();
     }
