@@ -11,6 +11,9 @@ import org.apache.lucene.document.Document;
 import tech.mlsql.retrieval.records.*;
 
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -141,13 +144,16 @@ public class RetrievalMaster {
 
     // In the future, we should extract the isReciprocalRankFusion as an enum
     // since we may provide many algorithms for fusion.
-    private void singleRecall(SearchQuery tempQuery, boolean isReciprocalRankFusion,
-                                            Map<Object, Float> newScores,
-                                            Map<Object,Map<String,Object>> idToDocs) {
+    private ScoreResult singleRecall(SearchQuery tempQuery, boolean isReciprocalRankFusion) {
+
+        Map<Object, Float> newScores = new HashMap<>();
+        Map<Object,Map<String,Object>> idToDocs = new HashMap<>();
+
         List<SearchResult> result = inner_search(tempQuery);
         if (isReciprocalRankFusion) {
             for (int i = 0; i < result.size(); i++) {
-                // this algorithm is from https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/MSR-TR-2010-82.pdf
+                // this algorithm is simple for now.
+                // maybe later we can refer to this: https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/MSR-TR-2010-82.pdf
                 var item = result.get(i);
                 var doc = item.doc();
                 var id = doc.get("_id");
@@ -167,6 +173,7 @@ public class RetrievalMaster {
                 idToDocs.put(id, doc);
             }
         }
+        return new ScoreResult(newScores, idToDocs);
     }
 
     public String search(String database, String table, String queryStr) throws Exception {
@@ -174,16 +181,41 @@ public class RetrievalMaster {
         SearchQuery query = Utils.toRecord(queryStr, SearchQuery.class);
         boolean isReciprocalRankFusion = query.keyword().isPresent() && query.vectorField().isPresent();
 
-        var newScores = new HashMap<Object, Float>();
-        var idToDocs = new HashMap<Object,Map<String,Object>>();
-        if (query.keyword().isPresent()) {
-            var tempQuery = new SearchQuery(query.keyword(), query.fields(), query.vector(), Optional.empty(), query.limit());
-            singleRecall(tempQuery,isReciprocalRankFusion,newScores,idToDocs);
+        List<ScoreResult> scoreResults = new ArrayList<>();
+
+        try(var executors = Executors.newVirtualThreadPerTaskExecutor()){
+
+            List<Future<ScoreResult>> responses = new ArrayList<>();
+
+            if(query.keyword().isPresent()){
+                var response = executors.submit(() -> {
+                    var tempQuery = new SearchQuery(query.keyword(), query.fields(), query.vector(), Optional.empty(), query.limit());
+                    return singleRecall(tempQuery,isReciprocalRankFusion);
+                });
+                responses.add(response);
+            }
+
+            if(query.vectorField().isPresent()){
+                var response = executors.submit(() -> {
+                    var tempQuery = new SearchQuery(Optional.empty(), query.fields(), query.vector(), query.vectorField(), query.limit());
+                    return singleRecall(tempQuery,isReciprocalRankFusion);
+                });
+                responses.add(response);
+            }
+
+            for (var response : responses) {
+                scoreResults.add(response.get(30, TimeUnit.SECONDS));
+            }
+
         }
 
-        if (query.vectorField().isPresent()) {
-            var tempQuery = new SearchQuery(Optional.empty(), query.fields(), query.vector(), query.vectorField(), query.limit());
-            singleRecall(tempQuery,isReciprocalRankFusion,newScores,idToDocs);
+        // merge the ScoreResult
+        Map<Object, Float> newScores = new HashMap<>();
+        Map<Object,Map<String,Object>> idToDocs = new HashMap<>();
+
+        for (var scoreResult : scoreResults) {
+            newScores.putAll(scoreResult.getNewScores());
+            idToDocs.putAll(scoreResult.getIdToDocs());
         }
 
         // convert the newScores to Entry list and sort by score descent
