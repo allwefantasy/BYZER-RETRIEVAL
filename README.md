@@ -237,7 +237,161 @@ byzer.restore_from_cluster_info(s)
 
 ## Rest API
 
-todo
+We also provide a rest api to access the retrieval clusters. You can use the following code to start the rest api:
+
+```python
+
+import ray
+from byzerllm.utils.retrieval.rest import deploy_retrieval_rest_server
+
+code_search_path=["/home/winubuntu/softwares/byzer-retrieval-lib/"]
+env_vars = {"JAVA_HOME": "/home/winubuntu/softwares/jdk-21",
+            "PATH":"/home/winubuntu/softwares/jdk-21/bin:/home/winubuntu/.cargo/bin:/usr/local/cuda/bin:/home/winubuntu/softwares/byzer-lang-all-in-one-linux-amd64-3.1.1-2.3.2/jdk8/bin:/home/winubuntu/miniconda3/envs/byzerllm-dev/bin:/home/winubuntu/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"}
+
+ray.init(address="auto",namespace="default",
+                 job_config=ray.job_config.JobConfig(code_search_path=code_search_path,
+                                                      runtime_env={"env_vars": env_vars}),ignore_reinit_error=True
+                 )
+
+deploy_retrieval_rest_server(host="0.0.0.0",route_prefix="/retrieval")
+```
+
+Then you can use endpoint `http://127.0.0.1:8000/retrievel` to access the retrieval cluster.
+                              
+create a retrieval cluster:
+
+```python
+import requests
+import json
+from byzerllm.utils.retrieval.rest import (ClusterSettingsParam,
+                                           EnvSettingsParam,
+                                           JVMSettingsParam,
+                                           ResourceRequirementParam,
+                                           ResourceRequirementSettingsParam)
+
+r = requests.post("http://127.0.0.1:8000/retrieval/cluster/create",json={
+    "cluster_settings":ClusterSettingsParam(
+            name="cluster1",
+            location="/tmp/cluster1",
+            numNodes=1
+        ).dict(), 
+    "env_settings":EnvSettingsParam(
+            javaHome=env_vars["JAVA_HOME"],
+            path=env_vars["PATH"]
+        ).dict(), 
+    "jvm_settings":JVMSettingsParam(
+            options=[]
+        ).dict(), 
+    "resource_requirement_settings": ResourceRequirementSettingsParam(
+        resourceRequirements=[ResourceRequirementParam(name="CPU",resourceQuantity=1.0)]).dict()
+})
+r.text
+```
+
+or recover the cluster is also supported in the rest api, you can use the following code to recover the cluster:
+
+```python
+import requests
+import json
+
+with open("/tmp/cluster_info.json","r") as f:
+    s = f.read()
+
+r = requests.post("http://127.0.0.1:8000/retrieval/cluster/restore",params={
+    "cluster_info":s
+})
+json.loads(r.text)
+```
+
+get cluster info:
+
+```python
+import requests
+import json
+
+r = requests.get("http://127.0.0.1:8000/retrieval/cluster/get/cluster1")
+json.loads(r.text)
+```
+
+create a table:
+
+```python
+import requests
+import json
+from byzerllm.utils.retrieval.rest import TableSettingsParam
+
+r = requests.post("http://127.0.0.1:8000/retrieval/table/create/cluster1",json=TableSettingsParam(
+    database="db1",table="table1",
+    schema="st(field(_id,long),field(name,string),field(content,string,analyze),field(vector,array(float)))",
+    location="/tmp/cluster1",num_shards=1,
+).dict())
+
+r.text
+```
+
+insert data:
+
+```python
+import requests
+import json
+from byzerllm.utils.retrieval.rest import TableSettingsParam
+
+data = [
+    {"_id":3, "name":"a", "content":"b c", "vector":[1.0,2.0,3.0]},
+    {"_id":4, "name":"d", "content":"b e", "vector":[1.0,2.6,4.0]}
+]
+
+
+
+r = requests.post("http://127.0.0.1:8000/retrieval/table/data",json={
+    "cluster_name":"cluster1",
+    "database":"db1",
+    "table":"table1",
+    "data":data
+})
+
+r.text
+```
+
+make the index persistent:
+
+```python
+import requests
+import json
+from byzerllm.utils.retrieval.rest import TableSettingsParam
+
+
+r = requests.post("http://127.0.0.1:8000/retrieval/table/commit",json={
+    "cluster_name":"cluster1",
+    "database":"db1",
+    "table":"table1"    
+})
+
+r.text
+```
+
+search:
+
+```python
+import requests
+import json
+from byzerllm.utils.retrieval.rest import SearchQueryParam
+
+
+r = requests.post("http://127.0.0.1:8000/retrievel/table/search",json={
+    "cluster_name":"cluster1", 
+    "database":"db1", 
+    "table":"table1", 
+    "query":SearchQueryParam(keyword="c",fields=["content"],
+                                vector=[1.0,2.0,3.0],vectorField="vector",
+                                limit=10).dict()
+})
+json.loads(r.text)
+```
+
+More details please refer to `http://127.0.0.1:8000/retrievel/docs`
+
+## Byzer-SQL API
 
 ## Table Schema Description
 
