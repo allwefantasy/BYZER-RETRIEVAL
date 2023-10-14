@@ -151,6 +151,20 @@ byzer.search_vector("cluster1","db1","table1",
 ## output: [{'name': 'a', '_id': 1, '_score': 1.0, 'content': 'b c'},{'name': 'd', '_id': 2, '_score': 0.9989467, 'content': 'b e'}]                    
 ```
 
+or you can search by both keyword and vector:
+
+```python
+from byzerllm.records import SearchQuery
+byzer.search("cluster1","db1","table1",
+                    SearchQuery(keyword="c",fields=["content"],
+                                vector=[1.0,2.0,3.0],vectorField="vector",
+                                limit=10))
+
+## output: [{'name': 'a', '_id': 1, '_score': 0.016666668, 'content': 'b c'},
+## {'name': 'd', '_id': 2, '_score': 0.016393442, 'content': 'b e'}]
+```
+
+
 You can also do follow operations to the table:
 
 1. truncate: delete all data in the table
