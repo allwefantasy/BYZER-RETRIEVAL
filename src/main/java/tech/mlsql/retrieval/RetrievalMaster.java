@@ -139,6 +139,34 @@ public class RetrievalMaster {
         return result;
     }
 
+    private void singleRecall(SearchQuery tempQuery, boolean isReciprocalRankFusion,
+                                            Map<Object, Float> newScores,
+                                            Map<Object,Map<String,Object>> idToDocs) {
+        List<SearchResult> result = inner_search(tempQuery);
+        if (isReciprocalRankFusion) {
+            for (int i = 0; i < result.size(); i++) {
+                // this algorithm is from https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/MSR-TR-2010-82.pdf
+                var item = result.get(i);
+                var doc = item.doc();
+                var id = doc.get("_id");
+                if (!newScores.containsKey(doc)) {
+                    newScores.put(id, 0.0f);
+                }
+                var previewScore = newScores.get(id);
+                var updatedScore = previewScore + 1.0f / (i + 60.0f);
+                newScores.put(id, updatedScore);
+                idToDocs.put(id, doc);
+            }
+        } else {
+            for (var item : result) {
+                var doc = item.doc();
+                var id = doc.get("_id");
+                newScores.put(id, item.score());
+                idToDocs.put(id, doc);
+            }
+        }
+    }
+
     public String search(String database, String table, String queryStr) throws Exception {
 
         SearchQuery query = Utils.toRecord(queryStr, SearchQuery.class);
@@ -148,56 +176,12 @@ public class RetrievalMaster {
         var idToDocs = new HashMap<Object,Map<String,Object>>();
         if (query.keyword().isPresent()) {
             var tempQuery = new SearchQuery(query.keyword(), query.fields(), query.vector(), Optional.empty(), query.limit());
-            List<SearchResult> result = inner_search(tempQuery);
-            if (isReciprocalRankFusion) {
-                for (int i = 0; i < result.size(); i++) {
-                    // this algorithm is from https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/MSR-TR-2010-82.pdf
-                    var item = result.get(i);
-                    var doc = item.doc();
-                    var id = doc.get("_id");
-                    if (!newScores.containsKey(doc)) {
-                        newScores.put(id, 0.0f);
-                    }
-                    var previewScore = newScores.get(id);
-                    var updatedScore = previewScore + 1.0f / (i + 60.0f);
-                    newScores.put(id, updatedScore);
-                    idToDocs.put(id, doc);
-                }
-            } else {
-                for (var item : result) {
-                    var doc = item.doc();
-                    var id = doc.get("_id");
-                    newScores.put(id, item.score());
-                    idToDocs.put(id, doc);
-                }
-            }
+            singleRecall(tempQuery,isReciprocalRankFusion,newScores,idToDocs);
         }
 
         if (query.vectorField().isPresent()) {
             var tempQuery = new SearchQuery(Optional.empty(), query.fields(), query.vector(), query.vectorField(), query.limit());
-            List<SearchResult> result = inner_search(tempQuery);
-            if (isReciprocalRankFusion) {
-                for (int i = 0; i < result.size(); i++) {
-                    // this algorithm is from https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/MSR-TR-2010-82.pdf
-                    var item = result.get(i);
-                    var doc = item.doc();
-                    var id = doc.get("_id");
-                    if (!newScores.containsKey(doc)) {
-                        newScores.put(id, 0.0f);
-                    }
-                    var previewScore = newScores.get(id);
-                    var updatedScore = previewScore + 1.0f / (i + 60.0f);
-                    newScores.put(id, updatedScore);
-                    idToDocs.put(id, doc);
-                }
-            } else {
-                for (var item : result) {
-                    var doc = item.doc();
-                    var id = doc.get("_id");
-                    newScores.put(id, item.score());
-                    idToDocs.put(id, doc);
-                }
-            }
+            singleRecall(tempQuery,isReciprocalRankFusion,newScores,idToDocs);
         }
 
         // convert the newScores to Entry list and sort by score descent
