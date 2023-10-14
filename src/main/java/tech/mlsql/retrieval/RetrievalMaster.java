@@ -1,5 +1,6 @@
 package tech.mlsql.retrieval;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.ray.api.ActorHandle;
 import io.ray.api.ObjectRef;
@@ -127,10 +128,10 @@ public class RetrievalMaster {
         return true;
     }
 
-    private List<SearchResult> inner_search(SearchQuery searchQuery) {
+    private List<SearchResult> inner_search(String database, String table, SearchQuery searchQuery) throws JsonProcessingException {
         var tasks = new ArrayList<ObjectRef<List<SearchResult>>>();
         for (var worker : workers) {
-            var ref = worker.task(RetrievalWorker::search, database, table, queryStr).remote();
+            var ref = worker.task(RetrievalWorker::search, database, table, Utils.toJson(searchQuery)).remote();
             tasks.add(ref);
         }
         List<SearchResult> result = Ray.get(tasks).stream().flatMap(r -> r.stream()).collect(Collectors.toList());
@@ -144,12 +145,12 @@ public class RetrievalMaster {
 
     // In the future, we should extract the isReciprocalRankFusion as an enum
     // since we may provide many algorithms for fusion.
-    private ScoreResult singleRecall(SearchQuery tempQuery, boolean isReciprocalRankFusion) {
+    private ScoreResult singleRecall(String database, String table,SearchQuery tempQuery, boolean isReciprocalRankFusion) throws Exception {
 
         Map<Object, Float> newScores = new HashMap<>();
         Map<Object,Map<String,Object>> idToDocs = new HashMap<>();
 
-        List<SearchResult> result = inner_search(tempQuery);
+        List<SearchResult> result = inner_search(database, table, tempQuery);
         if (isReciprocalRankFusion) {
             for (int i = 0; i < result.size(); i++) {
                 // this algorithm is simple for now.
@@ -190,7 +191,7 @@ public class RetrievalMaster {
             if(query.keyword().isPresent()){
                 var response = executors.submit(() -> {
                     var tempQuery = new SearchQuery(query.keyword(), query.fields(), query.vector(), Optional.empty(), query.limit());
-                    return singleRecall(tempQuery,isReciprocalRankFusion);
+                    return singleRecall(database,table,tempQuery,isReciprocalRankFusion);
                 });
                 responses.add(response);
             }
@@ -198,7 +199,7 @@ public class RetrievalMaster {
             if(query.vectorField().isPresent()){
                 var response = executors.submit(() -> {
                     var tempQuery = new SearchQuery(Optional.empty(), query.fields(), query.vector(), query.vectorField(), query.limit());
-                    return singleRecall(tempQuery,isReciprocalRankFusion);
+                    return singleRecall(database,table,tempQuery,isReciprocalRankFusion);
                 });
                 responses.add(response);
             }
