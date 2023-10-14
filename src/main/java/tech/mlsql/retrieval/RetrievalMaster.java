@@ -124,7 +124,7 @@ public class RetrievalMaster {
         return true;
     }
 
-    public String search(String database, String table, String queryStr) throws Exception {
+    private List<SearchResult> inner_search(SearchQuery searchQuery) {
         var tasks = new ArrayList<ObjectRef<List<SearchResult>>>();
         for (var worker : workers) {
             var ref = worker.task(RetrievalWorker::search, database, table, queryStr).remote();
@@ -136,12 +136,89 @@ public class RetrievalMaster {
             var score2 = o2.score();
             return Float.compare(score2, score1);
         });
-        SearchQuery query = Utils.toRecord(queryStr, SearchQuery.class);
+        return result;
+    }
 
+    public String search(String database, String table, String queryStr) throws Exception {
+
+        SearchQuery query = Utils.toRecord(queryStr, SearchQuery.class);
+        boolean isReciprocalRankFusion = query.keyword().isPresent() && query.vectorField().isPresent();
+
+        var newScores = new HashMap<Object, Float>();
+        var idToDocs = new HashMap<Object,Map<String,Object>>();
+        if (query.keyword().isPresent()) {
+            var tempQuery = new SearchQuery(query.keyword(), query.fields(), new float[]{}, Optional.empty(), query.limit());
+            List<SearchResult> result = inner_search(tempQuery);
+            if (isReciprocalRankFusion) {
+                for (int i = 0; i < result.size(); i++) {
+                    // this algorithm is from https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/MSR-TR-2010-82.pdf
+                    var item = result.get(i);
+                    var doc = item.doc();
+                    var id = doc.get("_id");
+                    if (!newScores.containsKey(doc)) {
+                        newScores.put(id, 0.0f);
+                    }
+                    var previewScore = newScores.get(id);
+                    var updatedScore = previewScore + 1.0f / (i + 60.0f);
+                    newScores.put(id, updatedScore);
+                    idToDocs.put(id, doc);
+                }
+            } else {
+                for (var item : result) {
+                    var doc = item.doc();
+                    var id = doc.get("_id");
+                    newScores.put(id, item.score());
+                    idToDocs.put(id, doc);
+                }
+            }
+        }
+
+        if (query.vectorField().isPresent()) {
+            var tempQuery = new SearchQuery(query.keyword(), query.fields(), new float[]{}, Optional.empty(), query.limit());
+            List<SearchResult> result = inner_search(tempQuery);
+            if (isReciprocalRankFusion) {
+                for (int i = 0; i < result.size(); i++) {
+                    // this algorithm is from https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/MSR-TR-2010-82.pdf
+                    var item = result.get(i);
+                    var doc = item.doc();
+                    var id = doc.get("_id");
+                    if (!newScores.containsKey(doc)) {
+                        newScores.put(id, 0.0f);
+                    }
+                    var previewScore = newScores.get(id);
+                    var updatedScore = previewScore + 1.0f / (i + 60.0f);
+                    newScores.put(id, updatedScore);
+                    idToDocs.put(id, doc);
+                }
+            } else {
+                for (var item : result) {
+                    var doc = item.doc();
+                    var id = doc.get("_id");
+                    newScores.put(id, item.score());
+                    idToDocs.put(id, doc);
+                }
+            }
+        }
+
+        // convert the newScores to Entry list and sort by score descent
+        var newScoresList = new ArrayList<Map.Entry<Object, Float>>(newScores.entrySet());
+        newScoresList.sort((o1, o2) -> {
+            var score1 = o1.getValue();
+            var score2 = o2.getValue();
+            return Float.compare(score2, score1);
+        });
+
+        // take query.limit items from newScoresList, make sure the query.limit is not bigger then the size of  newScoresList
+        var limit = query.limit();
+        if (limit > newScoresList.size()) {
+            limit = newScoresList.size();
+        }
+        var finalScoresList = newScoresList.subList(0, limit);
+        
         var jsonResult = new ArrayList<Map<String, Object>>();
-        for (var item : result.stream().limit(query.limit()).collect(Collectors.toList())) {
-            var doc = item.doc();
-            doc.put("_score", item.score());
+        for (var item : finalScoresList) {
+            var doc = idToDocs.get(item.getKey());
+            doc.put("_score", item.getValue());
             jsonResult.add(doc);
         }
         return Utils.toJson(jsonResult);
