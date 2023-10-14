@@ -147,7 +147,7 @@ public class RetrievalMaster {
         var newScores = new HashMap<Object, Float>();
         var idToDocs = new HashMap<Object,Map<String,Object>>();
         if (query.keyword().isPresent()) {
-            var tempQuery = new SearchQuery(query.keyword(), query.fields(), new float[]{}, Optional.empty(), query.limit());
+            var tempQuery = new SearchQuery(query.keyword(), query.fields(), query.vector(), Optional.empty(), query.limit());
             List<SearchResult> result = inner_search(tempQuery);
             if (isReciprocalRankFusion) {
                 for (int i = 0; i < result.size(); i++) {
@@ -174,7 +174,7 @@ public class RetrievalMaster {
         }
 
         if (query.vectorField().isPresent()) {
-            var tempQuery = new SearchQuery(query.keyword(), query.fields(), new float[]{}, Optional.empty(), query.limit());
+            var tempQuery = new SearchQuery(Optional.empty(), query.fields(), query.vector(), query.vectorField(), query.limit());
             List<SearchResult> result = inner_search(tempQuery);
             if (isReciprocalRankFusion) {
                 for (int i = 0; i < result.size(); i++) {
