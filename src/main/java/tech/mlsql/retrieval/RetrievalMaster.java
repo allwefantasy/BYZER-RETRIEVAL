@@ -139,6 +139,8 @@ public class RetrievalMaster {
         return result;
     }
 
+    // In the future, we should extract the isReciprocalRankFusion as an enum
+    // since we may provide many algorithms for fusion.
     private void singleRecall(SearchQuery tempQuery, boolean isReciprocalRankFusion,
                                             Map<Object, Float> newScores,
                                             Map<Object,Map<String,Object>> idToDocs) {
