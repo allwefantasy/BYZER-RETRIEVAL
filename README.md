@@ -378,7 +378,7 @@ import json
 from byzerllm.utils.retrieval.rest import SearchQueryParam
 
 
-r = requests.post("http://127.0.0.1:8000/retrievel/table/search",json={
+r = requests.post("http://127.0.0.1:8000/retrieval/table/search",json={
     "cluster_name":"cluster1", 
     "database":"db1", 
     "table":"table1", 
@@ -389,7 +389,7 @@ r = requests.post("http://127.0.0.1:8000/retrievel/table/search",json={
 json.loads(r.text)
 ```
 
-More details please refer to `http://127.0.0.1:8000/retrievel/docs`
+More details please refer to `http://127.0.0.1:8000/retrieval/docs`
 
 ## Byzer-SQL API
 
