@@ -3,23 +3,24 @@
 ## Introduction
 
 Byzer-retrieval is a distributed retrieval system which designed as a backend for LLM RAG (Retrieval Augmented Generation).
-The system supports both BM25 retrieval algorithm and vector retrieval algorithm, this means there is no need to deploy 
-so many systems e.g. the Elasticsearch or Milvus,
-and reduce the cost of deployment and maintenance. 
+The system supports both BM25 retrieval algorithm and vector retrieval algorithm, you can also use both of them at the same time and 
+get a fusion score for each document. 
 
-The Byzer-retrieval also provide the ability to search by both keyword and vector
-at the same time and give the document a fusion score, this is very useful for the retrieval augmented generation. 
+In contrast to the traditional way, there is no need to deploy so many systems e.g. the Elasticsearch or Milvus, 
+and reduce the cost of deployment and maintenance.  You can reuse the cluster which is used for training/serving the LLM model 
+because Byzer-retrieval use CPU/Memory(LLM using GPU/GPU Memory) which will make full use of the resources. 
 
 This project is implemented based on Lucene + Ray which use Lucene to build the inverted index/vector index and 
 use Ray to build the distributed system. Notice that this project requires JDK 21 or higher, because the new features of JDK 21 e.g. vector API
-and foreign memory will bring a great performance improvement to the system.
+and foreign memory will bring a great performance improvement to the system. We also introduce the virtual threads in Java
+to improve the concurrency performance of cluster.
 
-## Prequisites
+## Requisites
 
 1. Ray cluster == 2.7.0
 2. JDK 21 or higher
 3. Python 3.10.11
-4. byzerllm >= 0.1.6 (python package) 
+4. byzerllm >= 0.1.9 (python package) 
 
 ## Deploy
 
