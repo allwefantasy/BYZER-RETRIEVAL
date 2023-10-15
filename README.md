@@ -5,9 +5,12 @@
 Byzer-retrieval is a distributed retrieval system which designed as a backend for LLM RAG (Retrieval Augmented Generation).
 The system supports both BM25 retrieval algorithm and vector retrieval algorithm, this means there is no need to deploy 
 so many systems e.g. the Elasticsearch or Milvus,
-and reduce the cost of deployment and maintenance.
+and reduce the cost of deployment and maintenance. 
 
-The project is implemented based on Lucene + Ray which use Lucene to build the inverted index/vector index and 
+The Byzer-retrieval also provide the ability to search by both keyword and vector
+at the same time and give the document a fusion score, this is very useful for the retrieval augmented generation. 
+
+This project is implemented based on Lucene + Ray which use Lucene to build the inverted index/vector index and 
 use Ray to build the distributed system. Notice that this project requires JDK 21 or higher, because the new features of JDK 21 e.g. vector API
 and foreign memory will bring a great performance improvement to the system.
 
@@ -392,6 +395,8 @@ json.loads(r.text)
 More details please refer to `http://127.0.0.1:8000/retrieval/docs`
 
 ## Byzer-SQL API
+
+
 
 ## Table Schema Description
 
