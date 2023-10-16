@@ -397,6 +397,10 @@ More details please refer to `http://127.0.0.1:8000/retrieval/docs`
 
 ## Byzer-SQL API
 
+> require:
+> byzerllm >= 0.1.10
+> Byzer SQL Plugin: [byzer-llm-3.3_2.12-xxxx.jar](https://download.byzer.org/byzer-extensions/nightly-build/byzer-llm-3.3_2.12-0.1.5.jar) >= 0.1.5
+
 We also integrate the retrieval system into [Byzer-SQL](https://github.com/byzer-org/byzer-lang), 
 the first step is setup environment:
 
