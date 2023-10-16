@@ -397,6 +397,86 @@ More details please refer to `http://127.0.0.1:8000/retrieval/docs`
 
 ## Byzer-SQL API
 
+We also integrate the retrieval system into [Byzer-SQL](https://github.com/byzer-org/byzer-lang), 
+the first step is setup environment:
+
+```python
+!byzerllm setup retrieval;
+!byzerllm setup "code_search_path=/home/winubuntu/softwares/byzer-retrieval-lib/";
+!byzerllm setup "JAVA_HOME=/home/winubuntu/softwares/jdk-21";
+!byzerllm setup "PATH=/home/winubuntu/softwares/jdk-21/bin:/home/winubuntu/.cargo/bin:/usr/local/cuda/bin:/home/winubuntu/softwares/byzer-lang-all-in-one-linux-amd64-3.1.1-2.3.2/jdk8/bin:/home/winubuntu/miniconda3/envs/byzerllm-dev/bin:/home/winubuntu/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin";
+```
+
+Then we can create a retrieval cluster:
+
+```sql
+run command as Retrieval.``
+where action="cluster/create"
+and `cluster_settings.name`="cluster1"
+and `cluster_settings.location`="/tmp/cluster1"
+and `cluster_settings.numNodes`="1";
+```
+
+You can create a table in the cluster:
+
+```sql
+run command as Retrieval.``
+where action="table/create/cluster1"
+and `table_settings.database`="db1"
+and `table_settings.table`="table2"
+and `table_settings.location`="/tmp/cluster1"
+and `table_settings.schema`="st(field(_id,long),field(name,string),field(content,string,analyze),field(vector,array(float)))";
+```
+
+After that, we can insert some data into the table:
+
+```sql
+!byzerllm setup retrieval/data;
+
+set jsondata = '''
+{"_id":3, "name":"a", "content":"b c", "vector": [1.0,2.0,3.0] }
+{"_id":4, "name":"d", "content":"b e", "vector": [1.0,2.6,4.0] }
+''';
+
+load jsonStr.`jsondata` as newdata;
+
+run command as Retrieval.`` 
+where action="table/data"
+and clusterName="cluster1"
+and database="db1"
+and table="table2"
+and inputTable="newdata";
+```
+
+Try to register the retrieval as a UDF:
+
+```sql
+run command as Retrieval.`` where 
+action="register"
+and udfName="search";
+```
+
+You can change the udfName to any name you want, and then you can use the udf to search the data:
+
+```sql
+select search(
+array(to_json(map(
+ "clusterName","cluster1",
+ "database","db1",
+ "table","table2",
+ "query.keyword","c",
+ "query.fields","content",
+ "query.vector","1.0,2.0,3.0",
+ "query.vectorField","vector",
+ "query.limit","10"
+)))
+)
+ as c as output;
+ 
+-- output: [ "[{\"name\": \"a\", \"_id\": 3, \"_score\": 0.016666668, \"content\": \"b c\"}, {\"name\": \"d\", \"_id\": 4, \"_score\": 0.016393442, \"content\": \"b e\"}]" ]
+```
+
+try to modify the map key-value as you want, and you can get the search result.
 
 
 ## Table Schema Description
