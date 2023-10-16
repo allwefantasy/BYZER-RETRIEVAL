@@ -657,10 +657,12 @@ ray.get(v)
 ## Todo List
 
 1. [+] Python API
-2. [-] Byzer-SQL API
-3. [-] Rest API (based on Ray serve)
+2. [+] Byzer-SQL API
+3. [+] Rest API (based on Ray serve)
 4. [+] Cluster Recovery(The scenario is that the cluster is down, we need to restore the cluster from the storage.)
 5. [+] Resource Management (e.g. CPU, Memory, GPU)
+6. [-] Provide point query/delete API (get/delete the doc by _id)
+7. [-] Support analyzer configuration when create table
  
 
 
