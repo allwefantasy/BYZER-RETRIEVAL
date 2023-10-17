@@ -7,4 +7,4 @@ ray[data]==2.7.0
 ray[serve]==2.7.0
 pyarrow==12.0.1
 pyjava==0.6.12
-byzerllm==0.1.9
+byzerllm==0.1.10
