@@ -20,7 +20,7 @@ to improve the concurrency performance of cluster.
 1. Ray cluster == 2.7.0
 2. JDK 21 or higher
 3. Python 3.10.11
-4. byzerllm >= 0.1.9 (python package) 
+4. byzerllm >= 0.1.11 (python package) 
 
 ## Deploy
 
@@ -398,8 +398,8 @@ More details please refer to `http://127.0.0.1:8000/retrieval/docs`
 ## Byzer-SQL API
 
 > require:
-> byzerllm >= 0.1.10
-> Byzer SQL Plugin: [byzer-llm-3.3_2.12-xxxx.jar](https://download.byzer.org/byzer-extensions/nightly-build/byzer-llm-3.3_2.12-0.1.5.jar) >= 0.1.5
+> byzerllm >= 0.1.11
+> Byzer SQL Plugin: [byzer-llm-3.3_2.12-xxxx.jar](https://download.byzer.org/byzer-extensions/nightly-build/byzer-llm-3.3_2.12-0.1.6.jar) >= 0.1.6
 
 We also integrate the retrieval system into [Byzer-SQL](https://github.com/byzer-org/byzer-lang), 
 the first step is setup environment:
