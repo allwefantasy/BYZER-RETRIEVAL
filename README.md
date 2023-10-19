@@ -20,7 +20,9 @@ to improve the concurrency performance of cluster.
 1. Ray cluster == 2.7.0
 2. JDK 21 or higher
 3. Python 3.10.11
+4. pyjava > =0.6.13
 4. byzerllm >= 0.1.11 (python package) 
+5. byzer-llm >= 0.1.6 (java package for Byzer-SQL API,download address: https://download.byzer.org/byzer-extensions/nightly-build/byzer-llm-3.3_2.12-0.1.6.jar)
 
 ## Deploy
 
@@ -184,7 +186,7 @@ byzer.closeAndDeleteFile("cluster1","db1","table1")
 
 ## Cluster Recovery
 
-When the Retrieval Cluster  is crash or the Ray Cluster is down, we need to recover our cluster. You can mannually
+When the Retrieval Cluster  is crash or the Ray Cluster is down, we need to recover our cluster. You can manually
 export cluster metadata, and then save it to the storage. Try to use the following code to export the metadata:
 
 ```python
@@ -396,10 +398,6 @@ json.loads(r.text)
 More details please refer to `http://127.0.0.1:8000/retrieval/docs`
 
 ## Byzer-SQL API
-
-> require:
-> byzerllm >= 0.1.11
-> Byzer SQL Plugin: [byzer-llm-3.3_2.12-xxxx.jar](https://download.byzer.org/byzer-extensions/nightly-build/byzer-llm-3.3_2.12-0.1.6.jar) >= 0.1.6
 
 We also integrate the retrieval system into [Byzer-SQL](https://github.com/byzer-org/byzer-lang), 
 the first step is setup environment:
