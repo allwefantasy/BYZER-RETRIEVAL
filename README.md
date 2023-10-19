@@ -19,8 +19,8 @@ to improve the concurrency performance of cluster.
 
 ![](images/byzer-retrieval.png)
 
-The above figure shows the architecture of Byzer-retrieval. The user can use Python/Rest/SQL API to 
-create a retrieval cluster. The user can create any number of clusters, and each cluster can contain any number of tables.
+The above figure shows the architecture of Byzer-retrieval. The user can use Python/Rest/SQL API to launch a RetrievalGateway,
+and then use the RetrievalGateway to create a retrieval cluster. Actually, you can create any number of clusters, and each cluster can contain any number of tables.
 Notice that all tables in the same cluster have the same shard number. Each cluster will have a master actor and 
 some worker actors, and all these actors are Java actors. The master actor is as the entry point of the cluster.
 
