@@ -24,6 +24,8 @@ to improve the concurrency performance of cluster.
 4. byzerllm >= 0.1.11 (python package) 
 5. byzer-llm >= 0.1.6 (java package for Byzer-SQL API,download address: https://download.byzer.org/byzer-extensions/nightly-build/byzer-llm-3.3_2.12-0.1.6.jar)
 
+The java package `byzer-llm` is used for Byzer-SQL API, download it and put it in `$BYZER_HOME/plugin/` directory.
+
 ## Deploy
 
 ### Deploy Ray Cluster
@@ -48,6 +50,8 @@ mvn dependency:copy-dependencies -DoutputDirectory=target/dependency
 
 Then copy the jar file and dependency to the ray cluster. Suppose you put
 all the jars in `/home/winubuntu/softwares/byzer-retrieval-lib/`.
+
+> If you want to use Byzer-SQL API, you need to download the `byzer-llm` jar file and put it in `$BYZER_HOME/plugin/` directory.
 
 That's all.
 
