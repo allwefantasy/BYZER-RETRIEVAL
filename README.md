@@ -44,6 +44,9 @@ ray start --head  --dashboard-host 0.0.0.0
 Build the jar file and dependency:
 
 ```
+## use jdk 21 to compile the project
+export JAVA_HOME=/home/winubuntu/softwares/jdk-21
+export PATH=$JAVA_HOME/bin/:$PATH
 mvn clean package -DskipTests
 mvn dependency:copy-dependencies -DoutputDirectory=target/dependency
 ```
