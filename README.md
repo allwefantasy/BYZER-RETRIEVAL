@@ -15,6 +15,10 @@ use Ray to build the distributed system. Notice that this project requires JDK 2
 and foreign memory will bring a great performance improvement to the system. We also introduce the virtual threads in Java
 to improve the concurrency performance of cluster.
 
+## Architecture
+
+![](images/byzer-retrieval.png)
+
 ## Requisites
 
 1. Ray cluster == 2.7.0
