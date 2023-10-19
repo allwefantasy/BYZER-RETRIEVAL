@@ -19,6 +19,14 @@ to improve the concurrency performance of cluster.
 
 ![](images/byzer-retrieval.png)
 
+The above figure shows the architecture of Byzer-retrieval. The user can use Python/Rest/SQL API to 
+create a retrieval cluster. The user can create any number of clusters, and each cluster can contain any number of tables.
+Notice that all tables in the same cluster have the same shard number. Each cluster will have a master actor and 
+some worker actors, and all these actors are Java actors. The master actor is as the entry point of the cluster.
+
+If you use python API to insert data into the table, the data will be put in the ray cluster object store, and then the 
+master actor will route the data to the worker actors. The worker actors will build the index in parallel.
+
 ## Requisites
 
 1. Ray cluster == 2.7.0
