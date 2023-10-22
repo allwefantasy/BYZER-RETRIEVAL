@@ -85,7 +85,7 @@ os.execvp("bash", args=["bash", "-c", "java --version"])
 ```
 
 If this script fails, The `PATH` is not correct, and you need to check the `PATH` again.
-You may miss some key path e.g. `/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin` in the `PATH`.
+You may miss some key paths e.g. `/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin` in the `PATH`.
 
 ## Usage (high-level Python API)
 
