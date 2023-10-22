@@ -81,7 +81,7 @@ You can try to use the following code to validate the environment especially the
 import os
 os.environ["JAVA_HOME"]="/home/winubuntu/softwares/jdk-21"
 os.environ["PATH"]="/home/winubuntu/softwares/jdk-21/bin:/home/winubuntu/.cargo/bin:/usr/local/cuda/bin:/home/winubuntu/softwares/byzer-lang-all-in-one-linux-amd64-3.1.1-2.3.2/jdk8/bin:/home/winubuntu/miniconda3/envs/byzerllm-dev/bin:/home/winubuntu/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
-os.execvp("bash", args=["bash", "-c", "java --version"])
+os.execvp("bash", args=["bash", "-c", "java -version"])
 ```
 
 If this script fails, The `PATH` is not correct, and you need to check the `PATH` again.
