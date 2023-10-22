@@ -70,6 +70,23 @@ all the jars in `/home/winubuntu/softwares/byzer-retrieval-lib/`.
 
 That's all.
 
+## Validate the Environment
+
+Since byzer-retrieval need to configure JDK PATH, you need to setup `JAVA_HOME` and `PATH` before you 
+can launch the retrieval gateway in every kind of API(Python/Byzer-SQL/Rest).
+
+You can try to use the following code to validate the environment especially the `PATH` is correct:
+
+```python
+import os
+os.environ["JAVA_HOME"]="/home/winubuntu/softwares/jdk-21"
+os.environ["PATH"]="/home/winubuntu/softwares/jdk-21/bin:/home/winubuntu/.cargo/bin:/usr/local/cuda/bin:/home/winubuntu/softwares/byzer-lang-all-in-one-linux-amd64-3.1.1-2.3.2/jdk8/bin:/home/winubuntu/miniconda3/envs/byzerllm-dev/bin:/home/winubuntu/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+os.execvp("bash", args=["bash", "-c", "java --version"])
+```
+
+If this script fails, The `PATH` is not correct, and you need to check the `PATH` again.
+You may miss some key path e.g. `/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin` in the `PATH`.
+
 ## Usage (high-level Python API)
 
 We provide the a high-level python API to build the index, you can use the following code to build the index.
