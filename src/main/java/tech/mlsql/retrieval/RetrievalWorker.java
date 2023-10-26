@@ -174,12 +174,18 @@ public class RetrievalWorker {
 
             BooleanQuery.Builder builder = new BooleanQuery.Builder();
 
+            // Actually the keyword and vector field can not be both present
+            // the RetrievalMaster will check this
             assert (query.keyword().isPresent() || query.vectorField().isPresent());
 
             if (query.keyword().isPresent()) {
-                Query parsedQuery = new SimpleQueryParser(new WhitespaceAnalyzer(), queryFields).
-                        parse(query.keyword().get());
-                builder.add(parsedQuery, BooleanClause.Occur.SHOULD);
+                if (query.keyword().get().trim().equals("*")) {
+                    builder.add(new MatchAllDocsQuery(), BooleanClause.Occur.SHOULD);
+                }else {
+                    Query parsedQuery = new SimpleQueryParser(new WhitespaceAnalyzer(), queryFields).
+                            parse(query.keyword().get());
+                    builder.add(parsedQuery, BooleanClause.Occur.SHOULD);
+                }
             }
 
             if (query.vectorField().isPresent()) {
