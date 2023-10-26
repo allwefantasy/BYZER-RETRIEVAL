@@ -11,6 +11,7 @@ import io.ray.runtime.AbstractRayRuntime;
 import io.ray.runtime.object.ObjectRefImpl;
 import org.apache.lucene.document.Document;
 import tech.mlsql.retrieval.records.ClusterSettings;
+import tech.mlsql.retrieval.records.SearchQuery;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -23,10 +24,10 @@ public class Utils {
         return mapper.readValue(json, recordClass);
     }
 
-    public static <T> List<T> toRecordList(String json, Class<T> recordClass) throws JsonProcessingException {
+    public static List<SearchQuery> toSearchQueryList(String json) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new Jdk8Module());
-        return mapper.readValue(json, new TypeReference<List<T>>(){});
+        return mapper.readValue(json, new TypeReference<List<SearchQuery>>() {});
     }
 
     public static <T> String toJson(T record) throws JsonProcessingException {

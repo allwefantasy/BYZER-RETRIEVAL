@@ -179,7 +179,7 @@ public class RetrievalMaster {
 
     public String search(String queryStr) throws Exception {
 
-        List<SearchQuery> queries = Utils.toRecordList(queryStr, SearchQuery.class);
+        List<SearchQuery> queries = Utils.toSearchQueryList(queryStr);
         List<ScoreResult> scoreResults = new ArrayList<>();
 
         var sampleQuery = queries.get(0);
