@@ -145,10 +145,10 @@ public class RetrievalMaster {
 
     // In the future, we should extract the isReciprocalRankFusion as an enum
     // since we may provide many algorithms for fusion.
-    private ScoreResult singleRecall(String database, String table,SearchQuery tempQuery, boolean isReciprocalRankFusion) throws Exception {
+    private ScoreResult singleRecall(String database, String table, SearchQuery tempQuery, boolean isReciprocalRankFusion) throws Exception {
 
         Map<Object, Float> newScores = new HashMap<>();
-        Map<Object,Map<String,Object>> idToDocs = new HashMap<>();
+        Map<Object, Map<String, Object>> idToDocs = new HashMap<>();
 
         List<SearchResult> result = inner_search(database, table, tempQuery);
         if (isReciprocalRankFusion) {
@@ -177,42 +177,43 @@ public class RetrievalMaster {
         return new ScoreResult(newScores, idToDocs);
     }
 
-    public String search(String database, String table, String queryStr) throws Exception {
+    public String search(String queryStr) throws Exception {
 
-        SearchQuery query = Utils.toRecord(queryStr, SearchQuery.class);
-        boolean isReciprocalRankFusion = query.keyword().isPresent() && query.vectorField().isPresent();
-
+        List<SearchQuery> queries = Utils.toRecordList(queryStr, SearchQuery.class);
         List<ScoreResult> scoreResults = new ArrayList<>();
 
-        try(var executors = Executors.newVirtualThreadPerTaskExecutor()){
+        var sampleQuery = queries.get(0);
+
+        try (var executors = Executors.newVirtualThreadPerTaskExecutor()) {
 
             List<Future<ScoreResult>> responses = new ArrayList<>();
+            for (var query : queries) {
+                boolean isReciprocalRankFusion = query.keyword().isPresent() && query.vectorField().isPresent();
 
-            if(query.keyword().isPresent()){
-                var response = executors.submit(() -> {
-                    var tempQuery = new SearchQuery(query.keyword(), query.fields(), query.vector(), Optional.empty(), query.limit());
-                    return singleRecall(database,table,tempQuery,isReciprocalRankFusion);
-                });
-                responses.add(response);
+                if (query.keyword().isPresent()) {
+                    var response = executors.submit(() -> {
+                        var tempQuery = new SearchQuery(query.getDatabase(), query.getTable(), query.keyword(), query.fields(), query.vector(), Optional.empty(), query.limit());
+                        return singleRecall(query.getDatabase(), query.getTable(), tempQuery, isReciprocalRankFusion);
+                    });
+                    responses.add(response);
+                }
+
+                if (query.vectorField().isPresent()) {
+                    var response = executors.submit(() -> {
+                        var tempQuery = new SearchQuery(query.getDatabase(), query.getTable(), Optional.empty(), query.fields(), query.vector(), query.vectorField(), query.limit());
+                        return singleRecall(query.getDatabase(), query.getTable(), tempQuery, isReciprocalRankFusion);
+                    });
+                    responses.add(response);
+                }
             }
-
-            if(query.vectorField().isPresent()){
-                var response = executors.submit(() -> {
-                    var tempQuery = new SearchQuery(Optional.empty(), query.fields(), query.vector(), query.vectorField(), query.limit());
-                    return singleRecall(database,table,tempQuery,isReciprocalRankFusion);
-                });
-                responses.add(response);
-            }
-
             for (var response : responses) {
                 scoreResults.add(response.get(30, TimeUnit.SECONDS));
             }
-
         }
 
         // merge the ScoreResult
         Map<Object, Float> newScores = new HashMap<>();
-        Map<Object,Map<String,Object>> idToDocs = new HashMap<>();
+        Map<Object, Map<String, Object>> idToDocs = new HashMap<>();
 
         for (var scoreResult : scoreResults) {
             newScores.putAll(scoreResult.getNewScores());
@@ -228,12 +229,12 @@ public class RetrievalMaster {
         });
 
         // take query.limit items from newScoresList, make sure the query.limit is not bigger then the size of  newScoresList
-        var limit = query.limit();
+        var limit = sampleQuery.limit();
         if (limit > newScoresList.size()) {
             limit = newScoresList.size();
         }
         var finalScoresList = newScoresList.subList(0, limit);
-        
+
         var jsonResult = new ArrayList<Map<String, Object>>();
         for (var item : finalScoresList) {
             var doc = idToDocs.get(item.getKey());
@@ -271,6 +272,10 @@ public class RetrievalMaster {
             tasks.add(ref);
         }
         Ray.get(tasks);
+        var targetTableSettings = this.clusterInfo.findTableSettings(database, table);
+        if(targetTableSettings.isPresent()) {
+            targetTableSettings.get().setStatus("close");
+        }
         return true;
     }
 
@@ -281,6 +286,7 @@ public class RetrievalMaster {
             tasks.add(ref);
         }
         Ray.get(tasks);
+        this.clusterInfo.removeTableSettings(database,table);
         return true;
     }
 }

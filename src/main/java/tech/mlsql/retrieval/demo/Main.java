@@ -61,7 +61,7 @@ public class Main {
         
         worker.build("db1", "table1", "/tmp/data");
 
-        var query = new SearchQuery(
+        var query = new SearchQuery("db1","table1",
                 Optional.empty(),
                 List.of("content"),
                 new float[]{1.0f, 2.6f, 4.0f},

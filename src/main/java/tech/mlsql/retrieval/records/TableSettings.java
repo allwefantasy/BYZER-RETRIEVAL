@@ -20,6 +20,9 @@ public class TableSettings implements Serializable {
     private String location;
     private int num_shards;
 
+    // open/close
+    private String status = "open";
+
     public TableSettings(String database, String table, String schema, String location, int num_shards) {
         this.database = database;
         this.table = table;
@@ -29,6 +32,14 @@ public class TableSettings implements Serializable {
     }
 
     public TableSettings() {
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public String getDatabase() {

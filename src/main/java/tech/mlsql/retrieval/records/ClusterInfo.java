@@ -1,10 +1,7 @@
 package tech.mlsql.retrieval.records;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 10/8/23 WilliamZhu(allwefantasy@gmail.com)
@@ -66,8 +63,8 @@ public class ClusterInfo implements Serializable {
     public void setTableSettingsList(List<TableSettings> tableSettingsList) {
         this.tableSettingsList = tableSettingsList;
     }
-    
 
+    
     public ClusterInfo() {
     }
 
@@ -106,6 +103,26 @@ public class ClusterInfo implements Serializable {
 
     public void addTableSettings(TableSettings tableSettings) {
         this.tableSettingsList.add(tableSettings);
+    }
+    public void removeTableSettings(TableSettings tableSettings) {
+        var targetTableSettings = this.tableSettingsList.stream().filter(item -> item.database().equals(tableSettings.database()) && item.table().equals(tableSettings.table())).findFirst();
+        if (targetTableSettings.isPresent()) {
+            this.tableSettingsList.remove(targetTableSettings.get());
+        }
+    }
+
+    public void removeTableSettings(String database, String table) {
+        var targetTableSettings = this.tableSettingsList.stream().filter(item -> item.database().equals(database) &&
+                item.table().equals(table)).findFirst();
+        if (targetTableSettings.isPresent()) {
+            this.tableSettingsList.remove(targetTableSettings.get());
+        }
+    }
+
+    public Optional<TableSettings> findTableSettings(String database, String table) {
+        var targetTableSettings = this.tableSettingsList.stream().filter(item -> item.database().equals(database) &&
+                item.table().equals(table)).findFirst();
+        return targetTableSettings;
     }
 
     public JVMSettings jvmSettings() {

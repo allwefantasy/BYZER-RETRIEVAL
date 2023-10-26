@@ -1,5 +1,6 @@
 package tech.mlsql.retrieval;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
@@ -20,6 +21,12 @@ public class Utils {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new Jdk8Module());
         return mapper.readValue(json, recordClass);
+    }
+
+    public static <T> List<T> toRecordList(String json, Class<T> recordClass) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new Jdk8Module());
+        return mapper.readValue(json, new TypeReference<List<T>>(){});
     }
 
     public static <T> String toJson(T record) throws JsonProcessingException {

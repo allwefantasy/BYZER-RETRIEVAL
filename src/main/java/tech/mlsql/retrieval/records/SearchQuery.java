@@ -15,6 +15,8 @@ import java.util.Optional;
 //}
 
 public class SearchQuery implements Serializable {
+    private String database;
+    private String table;
     private Optional<String> keyword;
     private List<String> fields;
     private float[] vector;
@@ -64,12 +66,30 @@ public class SearchQuery implements Serializable {
         this.limit = limit;
     }
 
-    public SearchQuery(Optional<String> keyword, List<String> fields, float[] vector, Optional<String> vectorField, int limit) {
+    public SearchQuery(String database, String table,Optional<String> keyword, List<String> fields, float[] vector, Optional<String> vectorField, int limit) {
+        this.database = database;
+        this.table = table;
         this.keyword = keyword;
         this.fields = fields;
         this.vector = vector;
         this.vectorField = vectorField;
         this.limit = limit;
+    }
+
+    public String getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(String database) {
+        this.database = database;
+    }
+
+    public String getTable() {
+        return table;
+    }
+
+    public void setTable(String table) {
+        this.table = table;
     }
 
     public Optional<String> keyword() {
