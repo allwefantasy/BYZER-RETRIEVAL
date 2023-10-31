@@ -40,3 +40,4 @@ build/
 .idea/
 
 install.sh
+release.sh
