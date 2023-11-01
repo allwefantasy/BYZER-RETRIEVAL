@@ -33,8 +33,8 @@ master actor will route the data to the worker actors. The worker actors will bu
 2. JDK 21 or higher
 3. Python 3.10.11
 4. pyjava > =0.6.13
-4. byzerllm >= 0.1.11 (python package) 
-5. byzer-llm >= 0.1.6 (java package for Byzer-SQL API,download address: https://download.byzer.org/byzer-extensions/nightly-build/byzer-llm-3.3_2.12-0.1.6.jar)
+4. byzerllm >= 0.1.12 (python package) 
+5. byzer-llm >= 0.1.7 (java package for Byzer-SQL API,download address: https://download.byzer.org/byzer-extensions/nightly-build/byzer-llm-3.3_2.12-0.1.7.jar)
 
 The java package `byzer-llm` is used for Byzer-SQL API, download it and put it in `$BYZER_HOME/plugin/` directory.
 
@@ -571,6 +571,11 @@ st(field(column1,map(string,array(st(field(columnx,string))))))
 5. [+] Resource Management (e.g. CPU, Memory, GPU)
 6. [-] Provide point query/delete API (get/delete the doc by _id)
 7. [-] Support analyzer configuration when create table
+
+## Versions
+
+- 0.1.1: support multi-requests at the same time
+- 0.1.0: first version
  
 
 
