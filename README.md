@@ -574,6 +574,7 @@ st(field(column1,map(string,array(st(field(columnx,string))))))
 
 ## Versions
 
+- 0.1.2：fix rerank bug && add shutdown cluster API
 - 0.1.1: support multi-requests at the same time
 - 0.1.0: first version
  

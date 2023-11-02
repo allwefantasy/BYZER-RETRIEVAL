@@ -226,6 +226,9 @@ public class RetrievalMaster {
             for(var entry : scoreResult.getNewScores().entrySet()) {
                 var id = entry.getKey();
                 var score = entry.getValue();
+                if (!newScores.containsKey(id)) {
+                    newScores.put(id, 0.0f);
+                }
                 var previewScore = newScores.get(id);
                 var updatedScore = previewScore + score;
                 newScores.put(id, updatedScore);
