@@ -128,6 +128,17 @@ public class RetrievalMaster {
         return true;
     }
 
+    /**
+     *
+     * @param database
+     * @param table
+     * @param searchQuery
+     * @return
+     * @throws JsonProcessingException
+     *
+     *
+     * The caller should make sure the searchQuery contains full-text search or vector search and not be mixed.
+     */
     private List<SearchResult> inner_search(String database, String table, SearchQuery searchQuery) throws JsonProcessingException {
         var tasks = new ArrayList<ObjectRef<List<SearchResult>>>();
         for (var worker : workers) {
@@ -135,11 +146,6 @@ public class RetrievalMaster {
             tasks.add(ref);
         }
         List<SearchResult> result = Ray.get(tasks).stream().flatMap(r -> r.stream()).collect(Collectors.toList());
-        result.sort((o1, o2) -> {
-            var score1 = o1.score();
-            var score2 = o2.score();
-            return Float.compare(score2, score1);
-        });
         return result;
     }
 
@@ -216,8 +222,14 @@ public class RetrievalMaster {
         Map<Object, Map<String, Object>> idToDocs = new HashMap<>();
 
         for (var scoreResult : scoreResults) {
-            newScores.putAll(scoreResult.getNewScores());
             idToDocs.putAll(scoreResult.getIdToDocs());
+            for(var entry : scoreResult.getNewScores().entrySet()) {
+                var id = entry.getKey();
+                var score = entry.getValue();
+                var previewScore = newScores.get(id);
+                var updatedScore = previewScore + score;
+                newScores.put(id, updatedScore);
+            }
         }
 
         // convert the newScores to Entry list and sort by score descent
