@@ -561,20 +561,14 @@ st also supports nesting:
 st(field(column1,map(string,array(st(field(columnx,string))))))
 ```
 
-
-## Todo List
-
-1. [+] Python API
-2. [+] Byzer-SQL API
-3. [+] Rest API (based on Ray serve)
-4. [+] Cluster Recovery(The scenario is that the cluster is down, we need to restore the cluster from the storage.)
-5. [+] Resource Management (e.g. CPU, Memory, GPU)
-6. [-] Provide point query/delete API (get/delete the doc by _id)
-7. [-] Support analyzer configuration when create table
-
 ## Versions
 
-- 0.1.2：fix rerank bug && add shutdown cluster API
+### 0.1.2
+
+1. fix rerank bug 
+2. add shutdown cluster API                
+
+### Old Versions
 - 0.1.1: support multi-requests at the same time
 - 0.1.0: first version
  

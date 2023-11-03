@@ -304,4 +304,8 @@ public class RetrievalMaster {
         this.clusterInfo.removeTableSettings(database,table);
         return true;
     }
+
+    public void shutdown() throws Exception {
+        
+    }
 }

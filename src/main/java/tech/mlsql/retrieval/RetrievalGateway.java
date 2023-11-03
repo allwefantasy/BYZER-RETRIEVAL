@@ -138,4 +138,19 @@ public class RetrievalGateway {
     public ActorHandle<RetrievalMaster> getCluster(String clusterName) {
         return (ActorHandle<RetrievalMaster>) Ray.getActor(clusterName).get();
     }
+
+    // for now we will just shutdown the cluster and
+    // remove the cluster info from clusterInfos.
+    // We will not close all tables belong to the cluster and clean the index files
+    public boolean shutdownCluster(String clusterName) {
+        var cluster = getCluster(clusterName);
+        try {
+            cluster.task(RetrievalMaster::shutdown).remote();
+        } catch (Exception e) {
+            // ignore
+        }
+
+        this.clusterInfos.removeIf(item -> item.clusterSettings().name().equals(clusterName));
+        return true;
+    }
 }
