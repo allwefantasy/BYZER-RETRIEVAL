@@ -17,6 +17,9 @@ import static tech.mlsql.retrieval.Utils.toRecord;
 
 /**
  * 10/6/23 WilliamZhu(allwefantasy@gmail.com)
+ * This is a gateway which will called by python code.
+ * Notice that:
+ * 1. The method in this class should have a return value. Otherwise, the python code call it will crash this actor.
  */
 public class RetrievalGateway {
 
