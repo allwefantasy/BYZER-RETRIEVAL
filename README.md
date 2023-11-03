@@ -15,6 +15,19 @@ use Ray to build the distributed system. Notice that this project requires JDK 2
 and foreign memory will bring a great performance improvement to the system. We also introduce the virtual threads in Java
 to improve the concurrency performance of cluster.
 
+
+## Versions
+
+### 0.1.2
+Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.2.tar.gz
+
+1. fix rerank bug
+2. add shutdown cluster API
+
+### Old Versions
+- 0.1.1: support multi-requests at the same time
+- 0.1.0: first version
+
 ## Architecture
 
 ![](images/byzer-retrieval.png)
@@ -33,7 +46,7 @@ master actor will route the data to the worker actors. The worker actors will bu
 2. JDK 21 or higher
 3. Python 3.10.11
 4. pyjava > =0.6.13
-4. byzerllm >= 0.1.12 (python package) 
+4. byzerllm >= 0.1.13 (python package) 
 5. byzer-llm >= 0.1.7 (java package for Byzer-SQL API,download address: https://download.byzer.org/byzer-extensions/nightly-build/byzer-llm-3.3_2.12-0.1.7.jar)
 
 The java package `byzer-llm` is used for Byzer-SQL API, download it and put it in `$BYZER_HOME/plugin/` directory.
@@ -561,16 +574,6 @@ st also supports nesting:
 st(field(column1,map(string,array(st(field(columnx,string))))))
 ```
 
-## Versions
-
-### 0.1.2
-
-1. fix rerank bug 
-2. add shutdown cluster API                
-
-### Old Versions
-- 0.1.1: support multi-requests at the same time
-- 0.1.0: first version
  
 
 
