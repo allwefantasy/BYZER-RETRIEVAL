@@ -146,6 +146,15 @@ public class RetrievalMaster {
             tasks.add(ref);
         }
         List<SearchResult> result = Ray.get(tasks).stream().flatMap(r -> r.stream()).collect(Collectors.toList());
+
+        // The result from different workers , and the score is comparable (full-text search or vector search)
+        // So we need to sort the result by score descent.
+        result.sort((o1, o2) -> {
+            var score1 = o1.score();
+            var score2 = o2.score();
+            return Float.compare(score2, score1);
+        });
+
         return result;
     }
 
