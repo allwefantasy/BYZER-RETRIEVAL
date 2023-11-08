@@ -3,18 +3,19 @@
 ## Introduction
 
 Byzer-retrieval is a distributed retrieval system which designed as a backend for LLM RAG (Retrieval Augmented Generation).
-The system supports both BM25 retrieval algorithm and vector retrieval algorithm, you can also use both of them at the same time and 
+The system supports both full-text search and vector retrieval algorithm, you can also use both of them at the same time and 
 get a fusion score for each document. 
 
-In contrast to the traditional way, there is no need to deploy so many systems e.g. the Elasticsearch or Milvus, 
+This project is implemented based on Lucene + Ray which use Lucene to build the inverted index/vector index and
+use Ray to build the distributed system. 
+
+In contrast to the traditional way,there is no need to deploy so many systems e.g. the Elasticsearch or Milvus, 
 and reduce the cost of deployment and maintenance.  You can reuse the cluster which is used for training/serving the LLM model 
 because Byzer-retrieval use CPU/Memory(LLM using GPU/GPU Memory) which will make full use of the resources. 
 
-This project is implemented based on Lucene + Ray which use Lucene to build the inverted index/vector index and 
-use Ray to build the distributed system. Notice that this project requires JDK 21 or higher, because the new features of JDK 21 e.g. vector API
+Notice that this project requires JDK 21 or higher, because the new features of JDK 21 e.g. vector API
 and foreign memory will bring a great performance improvement to the system. We also introduce the virtual threads in Java
 to improve the concurrency performance of cluster.
-
 
 ## Versions
 
@@ -52,16 +53,19 @@ master actor will route the data to the worker actors. The worker actors will bu
 2. JDK 21 or higher
 3. Python 3.10.11
 4. pyjava > =0.6.13
-4. byzerllm >= 0.1.13 (python package) 
-5. byzer-llm >= 0.1.7 (java package for Byzer-SQL API,download address: https://download.byzer.org/byzer-extensions/nightly-build/byzer-llm-3.3_2.12-0.1.7.jar)
+4. byzerllm >= 0.1.13 (Python API) 
+5. byzer-llm >= 0.1.7 (Byzer-SQL API,download address: https://download.byzer.org/byzer-extensions/nightly-build/byzer-llm-3.3_2.12-0.1.7.jar)
 
 The java package `byzer-llm` is used for Byzer-SQL API, download it and put it in `$BYZER_HOME/plugin/` directory.
 
 ## Deploy
 
+The Byzer-Retrieval runs on the Ray Cluster, so you need to deploy a Ray Cluster first.
+Once you have a Ray Cluster, you can deploy the Byzer-Retrieval by Python, Byzer-SQL or Rest API.
+
 ### Deploy Ray Cluster
 
-Clone this project.
+Clone this project and install the requirements, then start ray cluster:
 
 ```
 conda create -n byzer-retrieval python=3.10.11
@@ -71,8 +75,11 @@ pip install -r requirements.txt
 ray start --head  --dashboard-host 0.0.0.0
 ```
 
-You can download [Byzer-Retrieval Package](https://download.byzer.org/byzer-retrieval/) and extract it to the directory 
-which you want to deploy the retrieval system. or build the jar file and dependency from source code.
+You can download the latest version of [Byzer-Retrieval Package](https://download.byzer.org/byzer-retrieval/) and 
+extract it to the directory which you want to deploy the retrieval system.
+That's all. 
+
+### Build the jar file and dependency from source code
 
 Here is the command to build the jar file and dependency from source code:
 
@@ -87,13 +94,9 @@ mvn dependency:copy-dependencies -DoutputDirectory=target/dependency
 Then copy the jar file and dependency to the ray cluster. Suppose you put
 all the jars in `/home/winubuntu/softwares/byzer-retrieval-lib/`.
 
-
-
 > If you want to use Byzer-SQL API, you need to download the `byzer-llm` jar file and put it in `$BYZER_HOME/plugin/` directory.
 
-That's all.
-
-## Validate the Environment
+### Validate the Environment
 
 Since byzer-retrieval need to configure JDK PATH, you need to setup `JAVA_HOME` and `PATH` before you 
 can launch the retrieval gateway in every kind of API(Python/Byzer-SQL/Rest).
@@ -110,9 +113,9 @@ os.execvp("bash", args=["bash", "-c", "java -version"])
 If this script fails, The `PATH` is not correct, and you need to check the `PATH` again.
 You may miss some key paths e.g. `/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin` in the `PATH`.
 
-## Usage (high-level Python API)
+### Deploy Byzer-Retrieval by Python API
 
-We provide the a high-level python API to build the index, you can use the following code to build the index.
+The first step is to setup the environment and connect the Ray Cluster:
 
 ```python
 import ray
@@ -133,6 +136,17 @@ to the path of the jar files which we already put in ray cluster, and set the `r
 Notice that `JAVA_HOME`, `PATH` are both required.
 
 Then we can start a retrieval cluster:
+
+```python
+builder = byzer.cluster_builder()
+builder.set_name("cluster1").set_location("/tmp/cluster1").set_num_nodes(2).set_node_cpu(1).set_node_memory("3g")
+builder.set_java_home(env_vars["JAVA_HOME"]).set_path(env_vars["PATH"]).set_enable_zgc()
+builder.start_cluster()
+```
+
+In this step, we will start cluster named `cluster2` with two nodes, and the cluster will store the data in `/tmp/cluster1`.
+
+There is also a low-level API to start the cluster:
 
 ```python
 from byzerllm.records import EnvSettings,ClusterSettings,TableSettings,JVMSettings
@@ -158,20 +172,20 @@ byzer.start_cluster(
 
 ```
 
-In this step, we will start cluster named `cluster1` with only one node, and the cluster will store the data in `/tmp/cluster1`.
+we will start cluster named `cluster1` with only one node, and the cluster will store the data in `/tmp/cluster1`.
 Notice that we still need to set the `JAVA_HOME` and `PATH` in `EnvSettings`.  You can use jvm_options to set the JVM options e.g.
 `-Xmx32g` to set the max heap size of Retriveal Node.
 
-There is also a more convenient way to start the cluster:
+To validate the cluster is started successfully, you can use the following code:
 
 ```python
-builder = byzer.cluster_builder()
-builder.set_name("cluster2").set_location("/tmp/cluster1").set_num_nodes(2).set_node_cpu(1).set_node_memory("3g")
-builder.set_java_home(env_vars["JAVA_HOME"]).set_path(env_vars["PATH"]).set_enable_zgc()
-builder.start_cluster()
+byzer.clusterInfo("cluster1")
 ```
 
-Then we can create a table in the cluster:
+
+## Usage (high-level Python API)      
+
+Once you have a retrieval cluster, now try to create a database/table in the cluster:
 
 ```python
 byzer.create_table("cluster1",TableSettings(
