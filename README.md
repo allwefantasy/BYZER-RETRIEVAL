@@ -162,6 +162,15 @@ In this step, we will start cluster named `cluster1` with only one node, and the
 Notice that we still need to set the `JAVA_HOME` and `PATH` in `EnvSettings`.  You can use jvm_options to set the JVM options e.g.
 `-Xmx32g` to set the max heap size of Retriveal Node.
 
+There is also a more convenient way to start the cluster:
+
+```python
+builder = byzer.cluster_builder()
+builder.set_name("cluster2").set_location("/tmp/cluster1").set_num_nodes(2).set_node_cpu(1).set_node_memory("3g")
+builder.set_java_home(env_vars["JAVA_HOME"]).set_path(env_vars["PATH"]).set_enable_zgc()
+builder.start_cluster()
+```
+
 Then we can create a table in the cluster:
 
 ```python
@@ -180,23 +189,14 @@ data = [
     {"_id":2, "name":"d", "content":"b e", "vector":[1.0,2.6,4.0]}
 ]
 
-import json
-
-data_refs = []
-
-for item in data:
-    itemref = ray.put(json.dumps(item,ensure_ascii=False))
-    data_refs.append(itemref)
-
-byzer.build("cluster1","db1","table1",data_refs)
+byzer.build_from_dics("cluster1","db1","table1",data)
 
 byzer.commit("cluster1","db1","table1")
 ```
 In this step, we will insert the data into the table, and build the index. Notice that 
 
-1. the data should be put in the ray cluster object store.
-2. we need to commit the index after building the index to make the index persistent.
-3. we strongly recommend use JuiceFS to store the index data, because JuiceFS is a distributed file system which is 
+1. we need to commit the index after building the index to make the index persistent.
+2. we strongly recommend use JuiceFS to store the index data, because JuiceFS is a distributed file system which is 
    compatible with POSIX, and it is very easy to deploy and use. 
 
 
@@ -221,9 +221,9 @@ or you can search by both keyword and vector:
 ```python
 from byzerllm.records import SearchQuery
 byzer.search("cluster1","db1","table1",
-                    SearchQuery(keyword="c",fields=["content"],
+                    [SearchQuery(keyword="c",fields=["content"],
                                 vector=[1.0,2.0,3.0],vectorField="vector",
-                                limit=10))
+                                limit=10)])
 
 ## output: [{'name': 'a', '_id': 1, '_score': 0.016666668, 'content': 'b c'},
 ## {'name': 'd', '_id': 2, '_score': 0.016393442, 'content': 'b e'}]
@@ -240,6 +240,14 @@ You can also do follow operations to the table:
 byzer.truncate("cluster1","db1","table1")
 byzer.close("cluster1","db1","table1")
 byzer.closeAndDeleteFile("cluster1","db1","table1")
+```
+
+## Shutdown the Cluster
+
+You can use the following code to shutdown the cluster:
+
+```python
+byzer.shutdown_cluster(cluster_name="cluster1")
 ```
 
 
