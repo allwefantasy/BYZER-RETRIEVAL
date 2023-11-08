@@ -18,6 +18,12 @@ to improve the concurrency performance of cluster.
 
 ## Versions
 
+### 0.1.3
+Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.3.tar.gz
+
+1. fix the issue that the jvm options is not set correctly when launching the cluster
+2. sort the collection when fetch results from the multiple shards otherwise the results will be disordered and cause the rerank error.
+
 ### 0.1.2
 Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.2.tar.gz
 

@@ -37,7 +37,7 @@ public class RetrievalMaster {
 
         for (int i = 0; i < clusterSettings.getNumNodes(); i++) {
             var actor = Ray.actor(RetrievalWorker::new, clusterInfo, i);
-            actor.setName(clusterSettings.name() + "-worker").
+            actor.setName(clusterSettings.name() + "-worker-"+i).
                     setRuntimeEnv(runtimeEnv).
                     setJvmOptions(clusterInfo.jvmSettings().options());
 
@@ -315,6 +315,6 @@ public class RetrievalMaster {
     }
 
     public void shutdown() throws Exception {
-        
+        Ray.exitActor();
     }
 }

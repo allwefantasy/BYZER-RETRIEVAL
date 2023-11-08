@@ -40,10 +40,7 @@ public class RetrievalGateway {
         // --enable-preview --add-modules jdk.incubator.vector
         var jvmSettings = toRecord(JVMSettingsStr, JVMSettings.class);
 
-
-        if (jvmSettings.options().isEmpty()) {
-            jvmSettings.options().addAll(Utils.defaultJvmOptions());
-        }
+        jvmSettings.options().addAll(Utils.defaultJvmOptions());
 
         if (!jvmSettings.options().contains("--enable-preview")) {
             jvmSettings.options().add("--enable-preview");
