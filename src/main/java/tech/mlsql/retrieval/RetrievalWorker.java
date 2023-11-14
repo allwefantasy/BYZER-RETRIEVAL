@@ -6,24 +6,21 @@ import org.apache.commons.io.FileUtils;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.LongField;
-import org.apache.lucene.document.LongPoint;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.Term;
+import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.simple.SimpleQueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.NIOFSDirectory;
+import tech.mlsql.retrieval.batchserver.BatchServer;
 import tech.mlsql.retrieval.records.*;
+import tech.mlsql.retrieval.schema.SchemaUtils;
 import tech.mlsql.retrieval.schema.SimpleSchemaParser;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
-
-import static java.lang.StringTemplate.STR;
 
 /**
  * 10/6/23 WilliamZhu(allwefantasy@gmail.com)
@@ -33,6 +30,8 @@ public class RetrievalWorker {
     private List<Searcher> tableSeacherList;
 
     private int workerId;
+
+    private BatchServer batchServer;
 
     public RetrievalWorker(ClusterInfo clusterInfo, int workerId) {
         this.clusterInfo = clusterInfo;
@@ -45,6 +44,8 @@ public class RetrievalWorker {
                 e.printStackTrace();
             }
         }
+//        this.batchServer = new BatchServer(this, getNode(), 0);
+//        this.batchServer.start();
     }
 
     public int getWorkerId() {
@@ -57,6 +58,7 @@ public class RetrievalWorker {
         var currentNode = nodes.stream().filter(f -> f.nodeId.equals(currentNodeId)).findFirst().get();
         return currentNode.nodeAddress;
     }
+
 
     public boolean createTable(TableSettings tableSettings) throws Exception {
 
@@ -77,7 +79,7 @@ public class RetrievalWorker {
         // start a thread to refresh the searcher every second
         final ControlledRealTimeReopenThread<IndexSearcher> nrtReopenThread =
                 new ControlledRealTimeReopenThread<>(indexWriter, manager, 1, 1);
-        nrtReopenThread.setName(STR. "\{ tableSettings.database() }.\{ tableSettings.table() } NRT Reopen Thread" );
+        nrtReopenThread.setName(tableSettings.database() + " " + tableSettings.table() + " NRT Reopen Thread");
         nrtReopenThread.setPriority(Math.min(Thread.currentThread().getPriority() + 2, Thread.MAX_PRIORITY));
         nrtReopenThread.setDaemon(true);
         nrtReopenThread.start();
@@ -92,6 +94,34 @@ public class RetrievalWorker {
                         f.tableSettings().database().equals(database) &&
                                 f.tableSettings().table().equals(table)).findFirst()
                 .get();
+    }
+
+
+    public Iterator<Document> iterateAllDocs(String database, String table) throws IOException {
+        var searcher = getSearcher(database, table).searcherManager();
+        final IndexSearcher indexSearcher = searcher.acquire();
+        final IndexReader indexReader = indexSearcher.getIndexReader();
+        AtomicInteger i = new AtomicInteger(0);
+        return new Iterator<Document>() {
+
+            @Override
+            public boolean hasNext() {
+                return i.get() < indexReader.maxDoc();
+            }
+
+            @Override
+            public Document next() {
+                Document doc = null;
+                try {
+                    doc = indexReader.document(i.getAndIncrement());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return doc;
+
+            }
+        };
+
     }
 
     public boolean build(String database, String table, String dataLocationStr) throws Exception {
@@ -115,7 +145,7 @@ public class RetrievalWorker {
                                 if (value == null) {
                                     continue;
                                 }
-                                doc.add(SimpleSchemaParser.toLuceneField(field, value));
+                                doc.add(SchemaUtils.toLuceneField(field, value));
                             }
                             indexWriter.addDocument(doc);
                         }
@@ -143,7 +173,7 @@ public class RetrievalWorker {
                 if (value == null) {
                     continue;
                 }
-                doc.add(SimpleSchemaParser.toLuceneField(field, value));
+                doc.add(SchemaUtils.toLuceneField(field, value));
             }
             if (doc.getField("_id") instanceof LongField) {
                 LongField longField = (LongField) doc.getField("_id");
@@ -181,7 +211,7 @@ public class RetrievalWorker {
             if (query.keyword().isPresent()) {
                 if (query.keyword().get().trim().equals("*")) {
                     builder.add(new MatchAllDocsQuery(), BooleanClause.Occur.SHOULD);
-                }else {
+                } else {
                     Query parsedQuery = new SimpleQueryParser(new WhitespaceAnalyzer(), queryFields).
                             parse(query.keyword().get());
                     builder.add(parsedQuery, BooleanClause.Occur.SHOULD);
@@ -224,7 +254,7 @@ public class RetrievalWorker {
         }
     }
 
-    public boolean truncate(String database, String table) throws Exception{
+    public boolean truncate(String database, String table) throws Exception {
         var searcher = getSearcher(database, table);
         try {
             searcher.indexWriter().deleteAll();

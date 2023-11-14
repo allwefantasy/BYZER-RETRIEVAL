@@ -27,7 +27,8 @@ public class Utils {
     public static List<SearchQuery> toSearchQueryList(String json) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new Jdk8Module());
-        return mapper.readValue(json, new TypeReference<List<SearchQuery>>() {});
+        return mapper.readValue(json, new TypeReference<List<SearchQuery>>() {
+        });
     }
 
     public static <T> String toJson(T record) throws JsonProcessingException {
@@ -124,9 +125,9 @@ public class Utils {
     public static int route(Object id, int numWorkers) {
         Long shardId = 0l;
         if (id instanceof Long) {
-            shardId = (long)id % numWorkers;
+            shardId = (long) id % numWorkers;
         } else {
-            shardId = (long) (id.toString().hashCode() % numWorkers);
+            shardId = (long) (Utils.murmurhash3_x86_32(id.toString()) % numWorkers);
         }
         return shardId.intValue();
     }
@@ -151,4 +152,65 @@ public class Utils {
         }
     }
 
+    public static int murmurhash3_x86_32(String data) {
+        var bytes = data.getBytes();
+        var v= murmurhash3_x86_32(bytes, 0, bytes.length, 0);
+        if(v<0){
+            return -v;
+        }
+        return v;
+    }
+
+    public static int murmurhash3_x86_32(byte[] data, int offset, int len, int seed) {
+        final int c1 = 0xcc9e2d51;
+        final int c2 = 0x1b873593;
+
+        int h1 = seed;
+        int roundedEnd = offset + (len & 0xfffffffc); // round down to 4 byte block
+
+        for (int i = offset; i < roundedEnd; i += 4) {
+            // little endian load order
+            int k1 = (data[i] & 0xff) | ((data[i + 1] & 0xff) << 8) | ((data[i + 2] & 0xff) << 16) | (data[i + 3] << 24);
+            k1 *= c1;
+            k1 = Integer.rotateLeft(k1, 15);
+            k1 *= c2;
+
+            h1 ^= k1;
+            h1 = Integer.rotateLeft(h1, 13);
+            h1 = h1 * 5 + 0xe6546b64;
+        }
+
+        // handle the last few bytes of the input array
+        int k1 = 0;
+        switch (len & 0x03) {
+            case 3:
+                k1 = (data[roundedEnd + 2] & 0xff) << 16;
+                // fall through
+            case 2:
+                k1 |= (data[roundedEnd + 1] & 0xff) << 8;
+                // fall through
+            case 1:
+                k1 |= (data[roundedEnd] & 0xff);
+                k1 *= c1;
+                k1 = Integer.rotateLeft(k1, 15);
+                k1 *= c2;
+                h1 ^= k1;
+        }
+
+        // finalization
+        h1 ^= len;
+        h1 = fmix(h1);
+
+        return h1;
+    }
+
+    private static int fmix(int h1) {
+        h1 ^= h1 >>> 16;
+        h1 *= 0x85ebca6b;
+        h1 ^= h1 >>> 13;
+        h1 *= 0xc2b2ae35;
+        h1 ^= h1 >>> 16;
+
+        return h1;
+    }
 }
