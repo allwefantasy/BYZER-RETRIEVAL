@@ -12,10 +12,7 @@ import tech.mlsql.retrieval.records.TableSettings;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -62,6 +59,8 @@ public class Main {
         worker.build("db1", "table1", "/tmp/data");
 
         var query = new SearchQuery("db1","table1",
+                new HashMap<String,Object>(),
+                List.of(),
                 Optional.empty(),
                 List.of("content"),
                 new float[]{1.0f, 2.6f, 4.0f},

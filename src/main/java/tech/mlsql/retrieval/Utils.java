@@ -10,8 +10,16 @@ import io.ray.api.id.ObjectId;
 import io.ray.runtime.AbstractRayRuntime;
 import io.ray.runtime.object.ObjectRefImpl;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.SortField;
 import tech.mlsql.retrieval.records.ClusterSettings;
 import tech.mlsql.retrieval.records.SearchQuery;
+import tech.mlsql.retrieval.records.Searcher;
+import tech.mlsql.retrieval.records.TableSettings;
+import tech.mlsql.retrieval.schema.SchemaUtils;
+import tech.mlsql.retrieval.schema.StructField;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -154,8 +162,8 @@ public class Utils {
 
     public static int murmurhash3_x86_32(String data) {
         var bytes = data.getBytes();
-        var v= murmurhash3_x86_32(bytes, 0, bytes.length, 0);
-        if(v<0){
+        var v = murmurhash3_x86_32(bytes, 0, bytes.length, 0);
+        if (v < 0) {
             return -v;
         }
         return v;
@@ -212,5 +220,75 @@ public class Utils {
         h1 ^= h1 >>> 16;
 
         return h1;
+    }
+
+
+    public static void buildFilter(BooleanQuery.Builder filterQuery, Map<String, Object> filters, BooleanClause.Occur occur, Searcher searcher) {
+        if (filters.isEmpty()) {
+            return;
+        }
+        if (filters.containsKey("and") || filters.containsKey("or")) {
+            BooleanQuery.Builder subFilterQuery = new BooleanQuery.Builder();
+            if (filters.containsKey("and")) {
+                var andFilters = (List<Map<String, Object>>) filters.get("and");
+                for (var andFilter : andFilters) {
+                    buildFilter(subFilterQuery, andFilter, BooleanClause.Occur.MUST, searcher);
+                }
+                filterQuery.add(subFilterQuery.build(), BooleanClause.Occur.MUST);
+            }
+            if (filters.containsKey("or")) {
+                var orFilters = (List<Map<String, Object>>) filters.get("or");
+                for (var orFilter : orFilters) {
+                    buildFilter(subFilterQuery, orFilter, BooleanClause.Occur.SHOULD, searcher);
+                }
+                filterQuery.add(subFilterQuery.build(), BooleanClause.Occur.MUST);
+            }
+            return;
+        }
+        
+        var filter = filters;
+        var fieldName = filter.get("field").toString();
+        var fieldValue = filter.get("value");
+        Object fieldValue2 = null;
+
+        if (fieldValue == null) {
+            var min = filter.get("min");
+            var max = filter.get("max");
+            fieldValue = min;
+            fieldValue2 = max;
+        }
+
+        StructField field = SchemaUtils.getStructField(searcher.tableSettings().getSchema(), fieldName);
+        var subQuery = SchemaUtils.toLuceneQuery(field, fieldValue, fieldValue2);
+        filterQuery.add(subQuery, occur);
+    }
+
+    public static void buildFilter(BooleanQuery.Builder builder, SearchQuery query, Searcher searcher) {
+        var filters = query.getFilters();
+        if (filters.isEmpty()) {
+            return;
+        }
+        buildFilter(builder, filters, BooleanClause.Occur.MUST, searcher);
+    }
+
+    public  static Sort buidSort(SearchQuery sampleQuery, TableSettings tableSettings){
+        // [{"a":"desc"},{"b":"asc"}]
+        var sorts = sampleQuery.getSorts();
+        //convert sort Object to SortField
+        var sortFields = new SortField[sorts.size()];
+
+        for (int i = 0; i < sorts.size(); i++) {
+            var sort = sorts.get(i);
+            var field = sort.keySet().iterator().next();
+            var order = sort.get(field);
+            var reverse = false;
+            if (order.equals("desc")) {
+                reverse = true;
+            }
+            var fieldStruct = SchemaUtils.getStructField(tableSettings.schema(), field);
+            sortFields[i] = SchemaUtils.toSortField(fieldStruct, reverse);
+        }
+        var sort = new Sort(sortFields);
+        return sort;
     }
 }

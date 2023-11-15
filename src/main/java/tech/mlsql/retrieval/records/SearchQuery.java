@@ -2,6 +2,7 @@ package tech.mlsql.retrieval.records;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -17,6 +18,10 @@ import java.util.Optional;
 public class SearchQuery implements Serializable {
     private String database;
     private String table;
+
+    private Map<String,Object> filters;
+
+    private List<Map<String,String>> sorts;
     private Optional<String> keyword;
     private List<String> fields;
     private float[] vector;
@@ -66,14 +71,37 @@ public class SearchQuery implements Serializable {
         this.limit = limit;
     }
 
-    public SearchQuery(String database, String table,Optional<String> keyword, List<String> fields, float[] vector, Optional<String> vectorField, int limit) {
+    public SearchQuery(String database, String table,
+                       Map<String,Object> filters,
+                       List<Map<String,String>> sorts,
+                       Optional<String> keyword, List<String> fields,
+                       float[] vector, Optional<String> vectorField,
+                       int limit) {
         this.database = database;
         this.table = table;
+        this.filters = filters;
+        this.sorts = sorts;
         this.keyword = keyword;
         this.fields = fields;
         this.vector = vector;
         this.vectorField = vectorField;
         this.limit = limit;
+    }
+
+    public List<Map<String, String>> getSorts() {
+        return sorts;
+    }
+
+    public void setSorts(List<Map<String, String>> sorts) {
+        this.sorts = sorts;
+    }
+
+    public Map<String,Object> getFilters() {
+        return filters;
+    }
+
+    public void setFilters(Map<String,Object> filters) {
+        this.filters = filters;
     }
 
     public String getDatabase() {

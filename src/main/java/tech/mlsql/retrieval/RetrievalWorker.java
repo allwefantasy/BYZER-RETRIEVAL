@@ -14,6 +14,7 @@ import tech.mlsql.retrieval.batchserver.BatchServer;
 import tech.mlsql.retrieval.records.*;
 import tech.mlsql.retrieval.schema.SchemaUtils;
 import tech.mlsql.retrieval.schema.SimpleSchemaParser;
+import tech.mlsql.retrieval.schema.StructField;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -162,7 +163,7 @@ public class RetrievalWorker {
         var searcher = getSearcher(database, table);
         var tableSettings = searcher.tableSettings();
 
-        var schema = new SimpleSchemaParser().parse(tableSettings.schema());
+        var schema = SchemaUtils.getSchema(tableSettings.schema());
 
         var indexWriter = searcher.indexWriter();
         for (var dataRef : batchData) {
@@ -186,6 +187,45 @@ public class RetrievalWorker {
         return true;
     }
 
+    private TableSettings findTableSettings(String database, String table) {
+        return clusterInfo.getTableSettingsList().stream().filter(f ->
+                        f.database().equals(database) &&
+                                f.table().equals(table)).findFirst()
+                .get();
+    }
+
+    public List<SearchResult> filter(String database, String table, String queryStr) throws Exception {
+        var searcher = getSearcher(database, table);
+        var query = Utils.toRecord(queryStr, SearchQuery.class);
+        var searcherManager = searcher.searcherManager();
+        final IndexSearcher indexSearcher = searcherManager.acquire();
+
+        var sampleQuery = query;
+        var tableSettings = findTableSettings(sampleQuery.getDatabase(), sampleQuery.getTable());
+        var sort = Utils.buidSort(sampleQuery, tableSettings);
+
+        List<SearchResult> result = new ArrayList<>();
+        try {
+            BooleanQuery.Builder builder = new BooleanQuery.Builder();
+            Utils.buildFilter(builder, query, searcher);
+
+            var finalQuery = builder.build();
+
+            TopDocs docs = indexSearcher.search(finalQuery, query.limit(), sort);
+            for (ScoreDoc scoreDoc : docs.scoreDocs) {
+                var doc = Utils.documentToMap(indexSearcher.doc(scoreDoc.doc));
+                result.add(new SearchResult(scoreDoc.score, doc));
+            }
+        } finally {
+            if (indexSearcher != null) {
+                searcherManager.release(indexSearcher);
+            }
+        }
+
+        return result;
+
+    }
+
     public List<SearchResult> search(String database, String table, String queryStr) throws
             Exception {
 
@@ -207,6 +247,8 @@ public class RetrievalWorker {
             // Actually the keyword and vector field can not be both present
             // the RetrievalMaster will check this
             assert (query.keyword().isPresent() || query.vectorField().isPresent());
+
+            Utils.buildFilter(builder, query, searcher);
 
             if (query.keyword().isPresent()) {
                 if (query.keyword().get().trim().equals("*")) {

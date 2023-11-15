@@ -9,7 +9,10 @@ import io.ray.api.id.ObjectId;
 import io.ray.api.runtimeenv.RuntimeEnv;
 import io.ray.api.runtimeenv.types.RuntimeEnvName;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.SortField;
 import tech.mlsql.retrieval.records.*;
+import tech.mlsql.retrieval.schema.SchemaUtils;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -37,7 +40,7 @@ public class RetrievalMaster {
 
         for (int i = 0; i < clusterSettings.getNumNodes(); i++) {
             var actor = Ray.actor(RetrievalWorker::new, clusterInfo, i);
-            actor.setName(clusterSettings.name() + "-worker-"+i).
+            actor.setName(clusterSettings.name() + "-worker-" + i).
                     setRuntimeEnv(runtimeEnv).
                     setJvmOptions(clusterInfo.jvmSettings().options());
 
@@ -129,15 +132,11 @@ public class RetrievalMaster {
     }
 
     /**
-     *
      * @param database
      * @param table
      * @param searchQuery
      * @return
-     * @throws JsonProcessingException
-     *
-     *
-     * The caller should make sure the searchQuery contains full-text search or vector search and not be mixed.
+     * @throws JsonProcessingException The caller should make sure the searchQuery contains full-text search or vector search and not be mixed.
      */
     private List<SearchResult> inner_search(String database, String table, SearchQuery searchQuery) throws JsonProcessingException {
         var tasks = new ArrayList<ObjectRef<List<SearchResult>>>();
@@ -192,6 +191,64 @@ public class RetrievalMaster {
         return new ScoreResult(newScores, idToDocs);
     }
 
+    private TableSettings findTableSettings(String database, String table) {
+        return clusterInfo.getTableSettingsList().stream().filter(f ->
+                        f.database().equals(database) &&
+                                f.table().equals(table)).findFirst()
+                .get();
+    }
+
+    public String filter(String queryStr) throws Exception {
+        List<SearchQuery> queries = Utils.toSearchQueryList(queryStr);
+        List<SearchResult> collectedResults = new ArrayList<>();
+
+        var sampleQuery = queries.get(0);
+        try (var executors = Executors.newVirtualThreadPerTaskExecutor()) {
+            List<Future<List<SearchResult>>> responses = new ArrayList<>();
+            for (var query : queries) {
+                var response = executors.submit(() -> {
+                    var tasks = new ArrayList<ObjectRef<List<SearchResult>>>();
+                    for (var worker : workers) {
+                        var ref = worker.task(RetrievalWorker::filter, query.getDatabase(), query.getTable(),
+                                Utils.toJson(query)).remote();
+                        tasks.add(ref);
+                    }
+                    List<SearchResult> result = Ray.get(tasks).stream().flatMap(r -> r.stream()).collect(Collectors.toList());
+                    return result;
+                });
+                responses.add(response);
+            }
+            for (var response : responses) {
+                collectedResults.addAll(response.get(30, TimeUnit.SECONDS));
+            }
+        }
+        var sorts = sampleQuery.getSorts();
+
+
+        Collections.sort(collectedResults, (o1, o2) -> {
+            for (int i = 0; i < sorts.size(); i++) {
+                var sort = sorts.get(i);
+                var field = sort.keySet().iterator().next();
+                var order = sort.get(field);
+
+                var value1 = (Comparable) o1.doc().get(field);
+                var value2 = (Comparable) o2.doc().get(field);
+
+                int result = value1.compareTo(value2);
+                if (result != 0) {
+                    if (order.equals("desc")) {
+                        return -result;
+                    } else {
+                        return result;
+                    }
+                }
+            }
+            return 0;
+        });
+        return Utils.toJson(collectedResults.stream().map(f -> f.doc()).collect(Collectors.toList()));
+
+    }
+
     public String search(String queryStr) throws Exception {
 
         List<SearchQuery> queries = Utils.toSearchQueryList(queryStr);
@@ -207,7 +264,13 @@ public class RetrievalMaster {
 
                 if (query.keyword().isPresent()) {
                     var response = executors.submit(() -> {
-                        var tempQuery = new SearchQuery(query.getDatabase(), query.getTable(), query.keyword(), query.fields(), query.vector(), Optional.empty(), query.limit());
+                        var tempQuery = new SearchQuery(query.getDatabase(),
+                                query.getTable(),
+                                query.getFilters(),
+                                query.getSorts(),
+                                query.keyword(), query.fields(),
+                                query.vector(), Optional.empty(),
+                                query.limit());
                         return singleRecall(query.getDatabase(), query.getTable(), tempQuery, isReciprocalRankFusion);
                     });
                     responses.add(response);
@@ -215,7 +278,10 @@ public class RetrievalMaster {
 
                 if (query.vectorField().isPresent()) {
                     var response = executors.submit(() -> {
-                        var tempQuery = new SearchQuery(query.getDatabase(), query.getTable(), Optional.empty(), query.fields(), query.vector(), query.vectorField(), query.limit());
+                        var tempQuery = new SearchQuery(query.getDatabase(), query.getTable(),
+                                query.getFilters(), query.getSorts(),
+                                Optional.empty(), query.fields(), query.vector(), query.vectorField(),
+                                query.limit());
                         return singleRecall(query.getDatabase(), query.getTable(), tempQuery, isReciprocalRankFusion);
                     });
                     responses.add(response);
@@ -232,7 +298,7 @@ public class RetrievalMaster {
 
         for (var scoreResult : scoreResults) {
             idToDocs.putAll(scoreResult.getIdToDocs());
-            for(var entry : scoreResult.getNewScores().entrySet()) {
+            for (var entry : scoreResult.getNewScores().entrySet()) {
                 var id = entry.getKey();
                 var score = entry.getValue();
                 if (!newScores.containsKey(id)) {
@@ -297,7 +363,7 @@ public class RetrievalMaster {
         }
         Ray.get(tasks);
         var targetTableSettings = this.clusterInfo.findTableSettings(database, table);
-        if(targetTableSettings.isPresent()) {
+        if (targetTableSettings.isPresent()) {
             targetTableSettings.get().setStatus("close");
         }
         return true;
@@ -310,7 +376,7 @@ public class RetrievalMaster {
             tasks.add(ref);
         }
         Ray.get(tasks);
-        this.clusterInfo.removeTableSettings(database,table);
+        this.clusterInfo.removeTableSettings(database, table);
         return true;
     }
 
