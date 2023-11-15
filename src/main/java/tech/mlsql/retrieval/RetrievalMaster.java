@@ -223,28 +223,28 @@ public class RetrievalMaster {
             }
         }
         var sorts = sampleQuery.getSorts();
+        if (!sorts.isEmpty()) {
+            Collections.sort(collectedResults, (o1, o2) -> {
+                for (int i = 0; i < sorts.size(); i++) {
+                    var sort = sorts.get(i);
+                    var field = sort.keySet().iterator().next();
+                    var order = sort.get(field);
 
+                    var value1 = (Comparable) o1.doc().get(field);
+                    var value2 = (Comparable) o2.doc().get(field);
 
-        Collections.sort(collectedResults, (o1, o2) -> {
-            for (int i = 0; i < sorts.size(); i++) {
-                var sort = sorts.get(i);
-                var field = sort.keySet().iterator().next();
-                var order = sort.get(field);
-
-                var value1 = (Comparable) o1.doc().get(field);
-                var value2 = (Comparable) o2.doc().get(field);
-
-                int result = value1.compareTo(value2);
-                if (result != 0) {
-                    if (order.equals("desc")) {
-                        return -result;
-                    } else {
-                        return result;
+                    int result = value1.compareTo(value2);
+                    if (result != 0) {
+                        if (order.equals("desc")) {
+                            return -result;
+                        } else {
+                            return result;
+                        }
                     }
                 }
-            }
-            return 0;
-        });
+                return 0;
+            });
+        }
         return Utils.toJson(collectedResults.stream().map(f -> f.doc()).collect(Collectors.toList()));
 
     }

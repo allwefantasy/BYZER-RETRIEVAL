@@ -187,12 +187,6 @@ public class RetrievalWorker {
         return true;
     }
 
-    private TableSettings findTableSettings(String database, String table) {
-        return clusterInfo.getTableSettingsList().stream().filter(f ->
-                        f.database().equals(database) &&
-                                f.table().equals(table)).findFirst()
-                .get();
-    }
 
     public List<SearchResult> filter(String database, String table, String queryStr) throws Exception {
         var searcher = getSearcher(database, table);
@@ -201,7 +195,7 @@ public class RetrievalWorker {
         final IndexSearcher indexSearcher = searcherManager.acquire();
 
         var sampleQuery = query;
-        var tableSettings = findTableSettings(sampleQuery.getDatabase(), sampleQuery.getTable());
+        var tableSettings = getSearcher(database, table).tableSettings();
         var sort = Utils.buidSort(sampleQuery, tableSettings);
 
         List<SearchResult> result = new ArrayList<>();
@@ -210,8 +204,12 @@ public class RetrievalWorker {
             Utils.buildFilter(builder, query, searcher);
 
             var finalQuery = builder.build();
-
-            TopDocs docs = indexSearcher.search(finalQuery, query.limit(), sort);
+            TopDocs docs = null;
+            if (sort.getSort().length==0){
+                docs = indexSearcher.search(finalQuery, query.limit());
+            }else {
+                docs = indexSearcher.search(finalQuery, query.limit(), sort);
+            }
             for (ScoreDoc scoreDoc : docs.scoreDocs) {
                 var doc = Utils.documentToMap(indexSearcher.doc(scoreDoc.doc));
                 result.add(new SearchResult(scoreDoc.score, doc));
