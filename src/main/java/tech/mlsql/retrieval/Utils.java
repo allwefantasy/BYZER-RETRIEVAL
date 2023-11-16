@@ -271,9 +271,13 @@ public class Utils {
         buildFilter(builder, filters, BooleanClause.Occur.MUST, searcher);
     }
 
-    public  static Sort buidSort(SearchQuery sampleQuery, TableSettings tableSettings){
+    public  static Optional<Sort> buidSort(SearchQuery sampleQuery, TableSettings tableSettings){
         // [{"a":"desc"},{"b":"asc"}]
         var sorts = sampleQuery.getSorts();
+        if(sorts.size()==0) {
+            return Optional.empty();
+        }
+
         //convert sort Object to SortField
         var sortFields = new SortField[sorts.size()];
 
@@ -289,6 +293,6 @@ public class Utils {
             sortFields[i] = SchemaUtils.toSortField(fieldStruct, reverse);
         }
         var sort = new Sort(sortFields);
-        return sort;
+        return Optional.of(sort);
     }
 }

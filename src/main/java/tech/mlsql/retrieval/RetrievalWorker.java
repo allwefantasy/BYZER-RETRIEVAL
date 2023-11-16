@@ -205,10 +205,10 @@ public class RetrievalWorker {
 
             var finalQuery = builder.build();
             TopDocs docs = null;
-            if (sort.getSort().length==0){
+            if (sort.isEmpty()){
                 docs = indexSearcher.search(finalQuery, query.limit());
             }else {
-                docs = indexSearcher.search(finalQuery, query.limit(), sort);
+                docs = indexSearcher.search(finalQuery, query.limit(), sort.get());
             }
             for (ScoreDoc scoreDoc : docs.scoreDocs) {
                 var doc = Utils.documentToMap(indexSearcher.doc(scoreDoc.doc));
