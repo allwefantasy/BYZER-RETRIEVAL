@@ -31,14 +31,17 @@ public class SchemaUtils {
 ////        field.createVector(allocator);
 //    }
 
-    public static Field toLuceneField(StructField s, Object value) {
+    public static List<Field> toLuceneField(StructField s, Object value) {
         if (s.dataType() instanceof SingleType m) {
             if (m.name().equals("string") && s.analyze()) {
-                return new TextField(s.name(), (String) value, Field.Store.YES);
+                return List.of(new TextField(s.name(), (String) value, Field.Store.NO));
             } else if (m.name().equals("string")) {
-                return new StringField(s.name(), (String) value, Field.Store.YES);
+                return List.of(new StringField(s.name(), (String) value, Field.Store.YES));
             } else if (m.name().equals("int")) {
-                return new IntField(s.name(), (Integer) value, Field.Store.YES);
+                return List.of(
+                        new IntField(s.name(), (Integer) value, Field.Store.YES),
+                        new NumericDocValuesField(s.name(), (Integer) value)
+                );
             } else if (m.name().equals("long")) {
                 Long newValue = 0l;
                 if (value instanceof Integer) {
@@ -46,9 +49,15 @@ public class SchemaUtils {
                 } else {
                     newValue = (Long) value;
                 }
-                return new LongField(s.name(), newValue, Field.Store.YES);
+                return List.of(
+                        new LongField(s.name(), newValue, Field.Store.YES),
+                        new NumericDocValuesField(s.name(), newValue)
+                );
             } else if (m.name().equals("double")) {
-                return new DoubleField(s.name(), (Double) value, Field.Store.YES);
+                return List.of(
+                        new DoubleField(s.name(), (Double) value, Field.Store.YES),
+                        new DoubleDocValuesField(s.name(), (Double) value)
+                );
             } else if (m.name().equals("float")) {
                 Float newValue = 0.0f;
                 if (value instanceof Double) {
@@ -56,7 +65,10 @@ public class SchemaUtils {
                 } else {
                     newValue = (Float) value;
                 }
-                return new FloatField(s.name(), newValue, Field.Store.YES);
+                return List.of(
+                        new FloatField(s.name(), newValue, Field.Store.YES),
+                        new FloatDocValuesField(s.name(), newValue)
+                );
             } else {
                 throw new RuntimeException("{} {} is not support".formatted(s.name(), s.dataType()));
             }
@@ -68,7 +80,7 @@ public class SchemaUtils {
                 // in json format, we use double to represent float
                 // so we need to convert double to float
                 var floatArray = Utils.toFloatArray((List<Double>) value);
-                return new KnnFloatVectorField(s.name(), floatArray, VectorSimilarityFunction.COSINE);
+                return List.of(new KnnFloatVectorField(s.name(), floatArray, VectorSimilarityFunction.COSINE));
             }
             throw new RuntimeException("{} {} is not support".formatted(s.name(), s.dataType()));
         } else if (s.dataType() instanceof StructType m) {

@@ -146,7 +146,10 @@ public class RetrievalWorker {
                                 if (value == null) {
                                     continue;
                                 }
-                                doc.add(SchemaUtils.toLuceneField(field, value));
+                                for (var v : SchemaUtils.toLuceneField(field, value)) {
+                                    doc.add(v);
+                                }
+
                             }
                             indexWriter.addDocument(doc);
                         }
@@ -174,7 +177,9 @@ public class RetrievalWorker {
                 if (value == null) {
                     continue;
                 }
-                doc.add(SchemaUtils.toLuceneField(field, value));
+                for (var v : SchemaUtils.toLuceneField(field, value)) {
+                    doc.add(v);
+                }
             }
             if (doc.getField("_id") instanceof LongField) {
                 LongField longField = (LongField) doc.getField("_id");
@@ -205,9 +210,9 @@ public class RetrievalWorker {
 
             var finalQuery = builder.build();
             TopDocs docs = null;
-            if (sort.isEmpty()){
+            if (sort.isEmpty()) {
                 docs = indexSearcher.search(finalQuery, query.limit());
-            }else {
+            } else {
                 docs = indexSearcher.search(finalQuery, query.limit(), sort.get());
             }
             for (ScoreDoc scoreDoc : docs.scoreDocs) {
