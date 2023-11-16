@@ -7,7 +7,12 @@ import java.util.Map;
 /**
  * 10/7/23 WilliamZhu(allwefantasy@gmail.com)
  */
-public record StructField(String name, DataType dataType, boolean analyze,boolean nullable, Map<String,Object> metadata) {
+public record StructField(String name,
+                          DataType dataType,
+                          boolean analyze,
+                          boolean sort,
+                          boolean nullable, 
+                          Map<String,Object> metadata) {
 }
 
 

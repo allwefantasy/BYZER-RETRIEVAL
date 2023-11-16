@@ -7,10 +7,7 @@ import org.apache.lucene.document.*;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.VectorSimilarityFunction;
 import org.apache.lucene.queryparser.simple.SimpleQueryParser;
-import org.apache.lucene.search.KnnFloatVectorQuery;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.SortField;
-import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.*;
 import tech.mlsql.retrieval.Utils;
 import tech.mlsql.retrieval.batchserver.ArrowTypesConverter;
 import tech.mlsql.retrieval.schema.types.ArrayType;
@@ -38,9 +35,14 @@ public class SchemaUtils {
             } else if (m.name().equals("string")) {
                 return List.of(new StringField(s.name(), (String) value, Field.Store.YES));
             } else if (m.name().equals("int")) {
+                if (s.sort()) {
+                    return List.of(
+                            new SortedNumericDocValuesField(s.name(), (Integer) value)
+                    );
+                }
                 return List.of(
-                        new IntField(s.name(), (Integer) value, Field.Store.YES),
-                        new NumericDocValuesField(s.name(), (Integer) value)
+                        new IntField(s.name(), (Integer) value, Field.Store.YES)
+                        // , new NumericDocValuesField(s.name(), (Integer) value)
                 );
             } else if (m.name().equals("long")) {
                 Long newValue = 0l;
@@ -49,14 +51,25 @@ public class SchemaUtils {
                 } else {
                     newValue = (Long) value;
                 }
+                if (s.sort()) {
+                    return List.of(
+                            new LongField(s.name(), newValue, Field.Store.YES),
+                            new SortedNumericDocValuesField(s.name(), newValue)
+                    );
+                }
                 return List.of(
-                        new LongField(s.name(), newValue, Field.Store.YES),
-                        new NumericDocValuesField(s.name(), newValue)
+                        new LongField(s.name(), newValue, Field.Store.YES)
                 );
             } else if (m.name().equals("double")) {
+
+                if (s.sort()) {
+                    return List.of(
+                            new SortedNumericDocValuesField(s.name(), Double.doubleToRawLongBits((Double) value))
+                    );
+                }
                 return List.of(
-                        new DoubleField(s.name(), (Double) value, Field.Store.YES),
-                        new DoubleDocValuesField(s.name(), (Double) value)
+                        new DoubleField(s.name(), (Double) value, Field.Store.YES)
+                        // ,new DoubleDocValuesField(s.name(), (Double) value)
                 );
             } else if (m.name().equals("float")) {
                 Float newValue = 0.0f;
@@ -65,9 +78,14 @@ public class SchemaUtils {
                 } else {
                     newValue = (Float) value;
                 }
+                if (s.sort()) {
+                    return List.of(
+                            new SortedNumericDocValuesField(s.name(), Float.floatToRawIntBits(newValue))
+                    );
+                }
                 return List.of(
-                        new FloatField(s.name(), newValue, Field.Store.YES),
-                        new FloatDocValuesField(s.name(), newValue)
+                        new FloatField(s.name(), newValue, Field.Store.YES)
+                        // ,new FloatDocValuesField(s.name(), newValue)
                 );
             } else {
                 throw new RuntimeException("{} {} is not support".formatted(s.name(), s.dataType()));
@@ -105,12 +123,24 @@ public class SchemaUtils {
             if (m.name().equals("string")) {
                 return new SortField(s.name(), SortField.Type.STRING, reverse);
             } else if (m.name().equals("int")) {
+                if(s.sort()){
+                    return new SortedNumericSortField(s.name(), SortField.Type.INT, reverse);
+                }
                 return new SortField(s.name(), SortField.Type.INT, reverse);
             } else if (m.name().equals("long")) {
+                if(s.sort()){
+                    return new SortedNumericSortField(s.name(), SortField.Type.LONG, reverse);
+                }
                 return new SortField(s.name(), SortField.Type.LONG, reverse);
             } else if (m.name().equals("double")) {
+                if(s.sort()){
+                    return new SortedNumericSortField(s.name(), SortField.Type.DOUBLE, reverse);
+                }
                 return new SortField(s.name(), SortField.Type.DOUBLE, reverse);
             } else if (m.name().equals("float")) {
+                if(s.sort()){
+                    return new SortedNumericSortField(s.name(), SortField.Type.FLOAT, reverse);
+                }
                 return new SortField(s.name(), SortField.Type.FLOAT, reverse);
             } else {
                 throw new RuntimeException("{} {} is not support".formatted(s.name(), s.dataType()));
