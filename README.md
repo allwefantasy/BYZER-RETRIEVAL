@@ -1,6 +1,6 @@
 <p align="center">
   <picture>    
-    <img alt="Byzer-Retrieval" src="images/byzer-retrieval-logo.jpg" width=55%>
+    <img alt="Byzer-Retrieval" src="images/byzer-retrieval-logo.png" width=55%>
   </picture>
 </p>
 
