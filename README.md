@@ -1,4 +1,25 @@
-# BYZER-RETRIEVAL
+<p align="center">
+  <picture>    
+    <img alt="Byzer-Retrieval" src="images/byzer-retrieval-logo.jpg" width=55%>
+  </picture>
+</p>
+
+<h3 align="center">
+Easy, fast, and cheap Storage for LLM 
+</h3>
+
+<p align="center">
+| <a href="#"><b>Documentation</b></a> | <a href="#"><b>Blog</b></a> | | <a href="#"><b>Discord</b></a> |
+
+</p>
+
+---
+
+*Latest News* 🔥
+
+- [2023/11] Release Byzer-Retrieval 0.1.4
+
+---
 
 ## Introduction
 
@@ -17,7 +38,15 @@ Notice that this project requires JDK 21 or higher, because the new features of 
 and foreign memory will bring a great performance improvement to the system. We also introduce the virtual threads in Java
 to improve the concurrency performance of cluster.
 
+---  
+
 ## Versions
+
+### 0.1.4
+Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.4.tar.gz
+
+1. Support filter query 
+2. Fix minor bugs
 
 ### 0.1.3
 Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.3.tar.gz
