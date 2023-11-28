@@ -64,6 +64,53 @@ Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.2.t
 - 0.1.1: support multi-requests at the same time
 - 0.1.0: first version
 
+## Quick Installation
+
+1. Install Ray
+
+   ```shel
+   conda create -n byzer-retrieval python=3.10.11
+   conda activate byzer-retrieval
+   pip install -r requirements.txt
+   
+   ray start --head  --dashboard-host 0.0.0.0
+   ```
+
+2. Download the latest version of [Byzer-Retrieval Package](https://download.byzer.org/byzer-retrieval/) 
+    and the JDK-21, extract them to the local disk in every node in Ray. 
+
+3. Install Byzer-Retrieval
+
+   ```python
+   import ray
+   from byzerllm.utils.retrieval import ByzerRetrieval
+      
+   code_search_path=["/home/winubuntu/softwares/byzer-retrieval-lib/"]
+   env_vars = {"JAVA_HOME": "/home/winubuntu/softwares/jdk-21",
+               "PATH":"/home/winubuntu/softwares/jdk-21/bin:/home/winubuntu/.cargo/bin:/usr/local/cuda/bin:/home/winubuntu/softwares/byzer-lang-all-in-one-linux-amd64-3.1.1-2.3.2/jdk8/bin:/home/winubuntu/miniconda3/envs/byzerllm-dev/bin:/home/winubuntu/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"}
+   
+   
+   ray.init(address="auto",namespace="default",
+                    job_config=ray.job_config.JobConfig(code_search_path=code_search_path,
+                                                         runtime_env={"env_vars": env_vars})
+                    )
+   
+   retrieval = ByzerRetrieval()
+   retrieval.launch_gateway()
+   
+   builder = retrieval.cluster_builder()
+   builder.set_name("cluster1").set_location("/tmp/cluster1").set_num_nodes(2).set_node_cpu(1).set_node_memory("3g")
+   builder.set_java_home(env_vars["JAVA_HOME"]).set_path(env_vars["PATH"]).set_enable_zgc()
+   builder.start_cluster()
+   ```
+
+Now you can check the retrieval cluster in Ray Dashboard or you can use the following code to check the cluster:
+
+```python
+retrieval.clusterInfo("cluster1")
+```
+
+
 ## Architecture
 
 ![](images/byzer-retrieval.png)
@@ -75,38 +122,6 @@ some worker actors, and all these actors are Java actors. The master actor is as
 
 If you use python API to insert data into the table, the data will be put in the ray cluster object store, and then the 
 master actor will route the data to the worker actors. The worker actors will build the index in parallel.
-
-## Requisites
-
-1. Ray cluster == 2.7.0
-2. JDK 21 or higher
-3. Python 3.10.11
-4. pyjava > =0.6.13
-4. byzerllm >= 0.1.13 (Python API) 
-5. byzer-llm >= 0.1.7 (Byzer-SQL API,download address: https://download.byzer.org/byzer-extensions/nightly-build/byzer-llm-3.3_2.12-0.1.7.jar)
-
-The java package `byzer-llm` is used for Byzer-SQL API, download it and put it in `$BYZER_HOME/plugin/` directory.
-
-## Deploy
-
-The Byzer-Retrieval runs on the Ray Cluster, so you need to deploy a Ray Cluster first.
-Once you have a Ray Cluster, you can deploy the Byzer-Retrieval by Python, Byzer-SQL or Rest API.
-
-### Deploy Ray Cluster
-
-Clone this project and install the requirements, then start ray cluster:
-
-```
-conda create -n byzer-retrieval python=3.10.11
-conda activate byzer-retrieval
-pip install -r requirements.txt
-
-ray start --head  --dashboard-host 0.0.0.0
-```
-
-You can download the latest version of [Byzer-Retrieval Package](https://download.byzer.org/byzer-retrieval/) and 
-extract it to the directory which you want to deploy the retrieval system.
-That's all. 
 
 ### Build the jar file and dependency from source code
 
@@ -127,7 +142,7 @@ all the jars in `/home/winubuntu/softwares/byzer-retrieval-lib/`.
 
 ### Validate the Environment
 
-Since byzer-retrieval need to configure JDK PATH, you need to setup `JAVA_HOME` and `PATH` before you 
+Since byzer-retrieval need to configure JDK PATH, you need to setup `JAVA_HOME` and `PATH` before you
 can launch the retrieval gateway in every kind of API(Python/Byzer-SQL/Rest).
 
 You can try to use the following code to validate the environment especially the `PATH` is correct:
@@ -142,84 +157,18 @@ os.execvp("bash", args=["bash", "-c", "java -version"])
 If this script fails, The `PATH` is not correct, and you need to check the `PATH` again.
 You may miss some key paths e.g. `/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin` in the `PATH`.
 
-### Deploy Byzer-Retrieval by Python API
-
-The first step is to setup the environment and connect the Ray Cluster:
-
-```python
-import ray
-
-code_search_path=["/home/winubuntu/softwares/byzer-retrieval-lib/"]
-env_vars = {"JAVA_HOME": "/home/winubuntu/softwares/jdk-21",
-            "PATH":"/home/winubuntu/softwares/jdk-21/bin:/home/winubuntu/.cargo/bin:/usr/local/cuda/bin:/home/winubuntu/softwares/byzer-lang-all-in-one-linux-amd64-3.1.1-2.3.2/jdk8/bin:/home/winubuntu/miniconda3/envs/byzerllm-dev/bin:/home/winubuntu/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"}
-
-
-ray.init(address="auto",namespace="default",
-                 job_config=ray.job_config.JobConfig(code_search_path=code_search_path,
-                                                      runtime_env={"env_vars": env_vars})
-                 )            
-```
-
-In the above code, we use the `ray.init` to connect an existing ray cluster, and we set the `code_search_path`
-to the path of the jar files which we already put in ray cluster, and set the `runtime_env` to the path of the JDK 21.  
-Notice that `JAVA_HOME`, `PATH` are both required.
-
-Then we can start a retrieval cluster:
-
-```python
-builder = byzer.cluster_builder()
-builder.set_name("cluster1").set_location("/tmp/cluster1").set_num_nodes(2).set_node_cpu(1).set_node_memory("3g")
-builder.set_java_home(env_vars["JAVA_HOME"]).set_path(env_vars["PATH"]).set_enable_zgc()
-builder.start_cluster()
-```
-
-In this step, we will start cluster named `cluster2` with two nodes, and the cluster will store the data in `/tmp/cluster1`.
-
-There is also a low-level API to start the cluster:
-
-```python
-from byzerllm.records import EnvSettings,ClusterSettings,TableSettings,JVMSettings
-from byzerllm.utils.retrieval import ByzerRetrieval
-import os
-import ray
-
-byzer = ByzerRetrieval()
-byzer.launch_gateway()
-byzer.start_cluster(
-        cluster_settings=ClusterSettings(
-            name="cluster1",
-            location="/tmp/cluster1",
-            numNodes=1
-        ),
-            env_settings=EnvSettings(
-            javaHome=env_vars["JAVA_HOME"],
-            path=env_vars["PATH"]
-        ), 
-            jvm_settings=JVMSettings(
-            options=[]
-        ))
-
-```
-
-we will start cluster named `cluster1` with only one node, and the cluster will store the data in `/tmp/cluster1`.
-Notice that we still need to set the `JAVA_HOME` and `PATH` in `EnvSettings`.  You can use jvm_options to set the JVM options e.g.
-`-Xmx32g` to set the max heap size of Retriveal Node.
-
-To validate the cluster is started successfully, you can use the following code:
-
-```python
-byzer.clusterInfo("cluster1")
-```
-
-
 ## Usage (high-level Python API)      
 
 Once you have a retrieval cluster, now try to create a database/table in the cluster:
 
 ```python
-byzer.create_table("cluster1",TableSettings(
+retrieval.create_table("cluster1",TableSettings(
     database="db1",table="table1",
-    schema="st(field(_id,long),field(name,string),field(content,string,analyze),field(vector,array(float)))",
+    schema='''st(
+field(_id,long),
+field(name,string),
+field(content,string,analyze),
+field(vector,array(float)))''',
     location="/tmp/cluster1",num_shards=1,
 ))
 ```
@@ -232,9 +181,9 @@ data = [
     {"_id":2, "name":"d", "content":"b e", "vector":[1.0,2.6,4.0]}
 ]
 
-byzer.build_from_dics("cluster1","db1","table1",data)
+retrieval.build_from_dics("cluster1","db1","table1",data)
 
-byzer.commit("cluster1","db1","table1")
+retrieval.commit("cluster1","db1","table1")
 ```
 In this step, we will insert the data into the table, and build the index. Notice that 
 
@@ -247,14 +196,14 @@ For now, we can search the data.
 
 try to search by keyword:
 ```python
-byzer.search_keyword("cluster1","db1","table1",
+retrieval.search_keyword("cluster1","db1","table1",
                      keyword="c",fields=["content"],limit=10)
 ## output: [{'name': 'a', '_id': 1, '_score': 0.31506687, 'content': 'b c'}]
 ```
 
 try to search by vector:
 ```python
-byzer.search_vector("cluster1","db1","table1",
+retrieval.search_vector("cluster1","db1","table1",
                     vector=[1.0,2.0,3.0],vector_field="vector",limit=10)
 ## output: [{'name': 'a', '_id': 1, '_score': 1.0, 'content': 'b c'},{'name': 'd', '_id': 2, '_score': 0.9989467, 'content': 'b e'}]                    
 ```
@@ -263,7 +212,7 @@ or you can search by both keyword and vector:
 
 ```python
 from byzerllm.records import SearchQuery
-byzer.search("cluster1","db1","table1",
+retrieval.search("cluster1","db1","table1",
                     [SearchQuery(keyword="c",fields=["content"],
                                 vector=[1.0,2.0,3.0],vectorField="vector",
                                 limit=10)])
