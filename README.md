@@ -169,6 +169,7 @@ retrieval.create_table("cluster1",TableSettings(
 field(_id,long),
 field(name,string),
 field(content,string,analyze),
+field(raw_content,string),
 field(vector,array(float)))''',
     location="",num_shards=1,
 ))
@@ -178,11 +179,11 @@ After that, we can insert some data into the table:
 
 ```python
 data = [
-    {"_id":1, "name":"a", "content":"b c", "vector":[1.0,2.0,3.0]},
-    {"_id":2, "name":"d", "content":"b e", "vector":[1.0,2.6,4.0]}
+    {"_id":1, "name":"a", "content":"b c", "raw_content":"b c","vector":[1.0,2.0,3.0]},
+    {"_id":2, "name":"d", "content":"b e", "raw_content":"b e", "vector":[1.0,2.6,4.0]}
 ]
 
-retrieval.build_from_dics("cluster1","db1","table1",data)
+retrieval.build_from_dicts("cluster1","db1","table1",data)
 
 retrieval.commit("cluster1","db1","table1")
 ```
@@ -197,14 +198,14 @@ For now, we can search the data.
 
 try to search by keyword:
 ```python
-retrieval.search_keyword("cluster1","db1","table1",
-                     keyword="c",fields=["content"],limit=10)
-## output: [{'name': 'a', '_id': 1, '_score': 0.31506687, 'content': 'b c'}]
+retrieval.search_keyword("cluster1","db1","table1",filters={},
+                         keyword="c",fields=["content"],limit=10)
+## output: [{'name': 'a', 'raw_content': 'b c', '_id': 1, '_score': 0.31506687}]
 ```
 
 try to search by vector:
 ```python
-retrieval.search_vector("cluster1","db1","table1",
+retrieval.search_vector("cluster1","db1","table1",filters={},
                     vector=[1.0,2.0,3.0],vector_field="vector",limit=10)
 ## output: [{'name': 'a', '_id': 1, '_score': 1.0, 'content': 'b c'},{'name': 'd', '_id': 2, '_score': 0.9989467, 'content': 'b e'}]                    
 ```
@@ -213,13 +214,35 @@ or you can search by both keyword and vector:
 
 ```python
 from byzerllm.records import SearchQuery
-retrieval.search("cluster1","db1","table1",
-                    [SearchQuery(keyword="c",fields=["content"],
+retrieval.search("cluster1",
+                    [SearchQuery(database="db1",table="table1",keyword="c",fields=["content"], filters={},
                                 vector=[1.0,2.0,3.0],vectorField="vector",
                                 limit=10)])
 
-## output: [{'name': 'a', '_id': 1, '_score': 0.016666668, 'content': 'b c'},
-## {'name': 'd', '_id': 2, '_score': 0.016393442, 'content': 'b e'}]
+## output: [{'name': 'a', 'raw_content': 'b c', '_id': 1, '_score': 0.033333335},
+## {'name': 'd', 'raw_content': 'b e', '_id': 2, '_score': 0.016393442}]
+```
+
+If you just want to get the filter some documents, you can use the following code:
+
+```python
+retrieval.filter("cluster1",
+                 [SearchQuery("db1","table1",
+                              filters={"and":[{"field":"name","value":"d"}]},
+                              keyword=None,fields=[],
+                              vector=[],vectorField=None,
+                              limit=1)])
+```
+
+If you want to filter then search(with score), you can use the following code:
+
+```python
+retrieval.search("cluster1",
+                 [SearchQuery("db1","table1",
+                              filters={"and":[{"field":"name","value":"d"}]},
+                              keyword="b",fields=["content"],
+                              vector=[],vectorField=None,
+                              limit=1)])
 ```
 
 
