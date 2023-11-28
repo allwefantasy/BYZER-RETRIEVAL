@@ -109,7 +109,7 @@ Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.2.t
 Now you can check the retrieval cluster in Ray Dashboard or you can use the following code to check the cluster:
 
 ```python
-retrieval.clusterInfo("cluster1")
+retrieval.cluster_info("cluster1")
 ```
 
 If there is something wrong,you can validate the Environment e.g. `JAVA_HOME` and `PATH` before you
