@@ -110,6 +110,21 @@ Now you can check the retrieval cluster in Ray Dashboard or you can use the foll
 retrieval.clusterInfo("cluster1")
 ```
 
+If there is something wrong,you can validate the Environment e.g. `JAVA_HOME` and `PATH` before you
+can launch the retrieval gateway in every kind of API(Python/Byzer-SQL/Rest).
+
+Try to use the following code to validate the environment especially the `PATH` is correct:
+
+```python
+import os
+os.environ["JAVA_HOME"]="/home/winubuntu/softwares/jdk-21"
+os.environ["PATH"]="/home/winubuntu/softwares/jdk-21/bin:/home/winubuntu/.cargo/bin:/usr/local/cuda/bin:/home/winubuntu/softwares/byzer-lang-all-in-one-linux-amd64-3.1.1-2.3.2/jdk8/bin:/home/winubuntu/miniconda3/envs/byzerllm-dev/bin:/home/winubuntu/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+os.execvp("bash", args=["bash", "-c", "java -version"])
+```
+
+If this script fails, The `PATH` is not correct, and you need to check the `PATH` again.
+You may miss some key paths e.g. `/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin` in the `PATH`.
+
 
 ## Architecture
 
@@ -140,22 +155,6 @@ all the jars in `/home/winubuntu/softwares/byzer-retrieval-lib/`.
 
 > If you want to use Byzer-SQL API, you need to download the `byzer-llm` jar file and put it in `$BYZER_HOME/plugin/` directory.
 
-### Validate the Environment
-
-Since byzer-retrieval need to configure JDK PATH, you need to setup `JAVA_HOME` and `PATH` before you
-can launch the retrieval gateway in every kind of API(Python/Byzer-SQL/Rest).
-
-You can try to use the following code to validate the environment especially the `PATH` is correct:
-
-```python
-import os
-os.environ["JAVA_HOME"]="/home/winubuntu/softwares/jdk-21"
-os.environ["PATH"]="/home/winubuntu/softwares/jdk-21/bin:/home/winubuntu/.cargo/bin:/usr/local/cuda/bin:/home/winubuntu/softwares/byzer-lang-all-in-one-linux-amd64-3.1.1-2.3.2/jdk8/bin:/home/winubuntu/miniconda3/envs/byzerllm-dev/bin:/home/winubuntu/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
-os.execvp("bash", args=["bash", "-c", "java -version"])
-```
-
-If this script fails, The `PATH` is not correct, and you need to check the `PATH` again.
-You may miss some key paths e.g. `/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin` in the `PATH`.
 
 ## Usage (high-level Python API)      
 
@@ -169,7 +168,7 @@ field(_id,long),
 field(name,string),
 field(content,string,analyze),
 field(vector,array(float)))''',
-    location="/tmp/cluster1",num_shards=1,
+    location="",num_shards=1,
 ))
 ```
 
