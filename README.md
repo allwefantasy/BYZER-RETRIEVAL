@@ -95,7 +95,9 @@ Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.2.t
                                                          runtime_env={"env_vars": env_vars})
                     )
    
-   retrieval = ByzerRetrieval()
+   retrieval = ByzerRetrieval() 
+   # you can use ray.kill(ray.get_actor("RetrievalGateway")) 
+   # to kill the RetrievalGateway actor if you want to restart the RetrievalGateway actor. 
    retrieval.launch_gateway()
    
    builder = retrieval.cluster_builder()
@@ -228,9 +230,9 @@ You can also do follow operations to the table:
 3. closeAndDeleteFile: close the table and delete the index files
 
 ```python
-byzer.truncate("cluster1","db1","table1")
-byzer.close("cluster1","db1","table1")
-byzer.closeAndDeleteFile("cluster1","db1","table1")
+retrieval.truncate("cluster1","db1","table1")
+retrieval.close("cluster1","db1","table1")
+retrieval.closeAndDeleteFile("cluster1","db1","table1")
 ```
 
 ## Shutdown the Cluster
@@ -238,7 +240,7 @@ byzer.closeAndDeleteFile("cluster1","db1","table1")
 You can use the following code to shutdown the cluster:
 
 ```python
-byzer.shutdown_cluster(cluster_name="cluster1")
+retrieval.shutdown_cluster(cluster_name="cluster1")
 ```
 
 
