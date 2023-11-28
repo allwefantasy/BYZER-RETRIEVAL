@@ -250,7 +250,7 @@ When the Retrieval Cluster  is crash or the Ray Cluster is down, we need to reco
 export cluster metadata, and then save it to the storage. Try to use the following code to export the metadata:
 
 ```python
-cluster = byzer.cluster("cluster1")
+cluster = retrieval.cluster("cluster1")
 cluster1_meta = json.loads(ray.get(cluster.clusterInfo.remote()))
 # save s to file
 with open("/tmp/cluster_info.json","w") as f:
@@ -269,9 +269,9 @@ from byzerllm.utils.retrieval import ByzerRetrieval
 with open("/tmp/cluster_info.json","r") as f:
     s = json.load(f)
 
-byzer = ByzerRetrieval()
-byzer.launch_gateway()
-byzer.restore_from_cluster_info(s)
+retrieval = ByzerRetrieval()
+retrieval.launch_gateway()
+retrieval.restore_from_cluster_info(s)
 ```
 
 Notice that if the Ray Cluster is down, you need to connect it Ray cluster first, and then restore the retrieval cluster.
@@ -295,9 +295,9 @@ ray.init(address="auto",namespace="default",
                                                       runtime_env={"env_vars": env_vars})
                  )
 
-byzer = ByzerRetrieval()
-byzer.launch_gateway()
-byzer.restore_from_cluster_info(s)
+retrieval = ByzerRetrieval()
+retrieval.launch_gateway()
+retrieval.restore_from_cluster_info(s)
 
 ```
 
