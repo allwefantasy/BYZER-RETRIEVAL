@@ -175,6 +175,9 @@ field(vector,array(float)))''',
 ))
 ```
 
+> Notice that when the third value of the field is `analyze`, the field will be analyzed when indexing(using WhiteSpaceAnalyzer).
+
+
 After that, we can insert some data into the table:
 
 ```python
@@ -187,6 +190,9 @@ retrieval.build_from_dicts("cluster1","db1","table1",data)
 
 retrieval.commit("cluster1","db1","table1")
 ```
+
+> Notice that you can use Jieba to analyze the Chinese text, and use Byzer-LLM to get the vector of the text.
+
 In this step, we will insert the data into the table, and build the index. Notice that 
 
 1. we need to commit the index after building the index to make the index persistent.
@@ -245,6 +251,27 @@ retrieval.search("cluster1",
                               limit=1)])
 ```
 
+If you want to filter then sort the results:
+
+```python
+retrieval.filter("cluster1",
+                 [SearchQuery("db1","table1",
+                              filters={"and":[{"field":"name","value":"d"}]},
+                              sorts=[{"created_time":"desc"}],
+                              keyword=None,fields=[],
+                              vector=[],vectorField=None,
+                              limit=1)])
+```
+
+However, the field `created_time` must be marked as `sort` in the schema, otherwise the sort will not work or throw an exception.
+Try to add a field `created_time` in the schema like following:
+```python
+st(  
+...
+field(created_time,long,sort)
+...
+)
+```
 
 You can also do follow operations to the table:
 
