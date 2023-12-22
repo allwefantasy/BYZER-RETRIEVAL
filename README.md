@@ -68,6 +68,9 @@ Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.2.t
 
 1. Install Ray
 
+   > If you have installed [byzer-llm](https://github.com/allwefantasy/byzer-llm), you can skip this step.
+
+   
    ```shel
    conda create -n byzer-retrieval python=3.10.11
    conda activate byzer-retrieval
@@ -90,6 +93,8 @@ Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.2.t
                "PATH":"/home/winubuntu/softwares/jdk-21/bin:/home/winubuntu/.cargo/bin:/usr/local/cuda/bin:/home/winubuntu/softwares/byzer-lang-all-in-one-linux-amd64-3.1.1-2.3.2/jdk8/bin:/home/winubuntu/miniconda3/envs/byzerllm-dev/bin:/home/winubuntu/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"}
    
    
+   # Connect to ray. Notice that we should use job_config to configure the code_search_path and env_vars.
+   # Make sure there is no viarable in env_vars, and the JDK-21 is configured in PATH correctly.
    ray.init(address="auto",namespace="default",
                     job_config=ray.job_config.JobConfig(code_search_path=code_search_path,
                                                          runtime_env={"env_vars": env_vars})
