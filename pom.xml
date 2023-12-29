@@ -6,7 +6,7 @@
 
     <groupId>org.byzer</groupId>
     <artifactId>byzer-retrieval</artifactId>
-    <version>0.1.4</version>
+    <version>0.1.5</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
