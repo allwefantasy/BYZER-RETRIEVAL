@@ -249,6 +249,27 @@ public class RetrievalMaster {
 
     }
 
+    public boolean deleteByIds(String database, String table, String ids) throws Exception {
+        List<Object> idList = Utils.toRecord(ids, List.class);
+        var tasks = new ArrayList<ObjectRef<Boolean>>();
+        var shardIdsMap = new HashMap<Integer,ArrayList<Object>>();
+        for (var id : idList) {
+            var shardId = Utils.route(id, workers.size());
+            shardIdsMap.computeIfAbsent(shardId, k -> new ArrayList<>()).add(id);
+        }
+        for (int i = 0; i < workers.size(); i++) {
+            var shardIds = shardIdsMap.get(i);
+            if (shardIds == null || shardIds.isEmpty()) {
+                continue;
+            }
+            var worker = workers.get(i);
+            var ref = worker.task(RetrievalWorker::deleteByIds, database, table, Utils.toJson(shardIds)).remote();
+            tasks.add(ref);
+        }
+        Ray.get(tasks);
+        return true;
+    }
+
     public String search(String queryStr) throws Exception {
 
         List<SearchQuery> queries = Utils.toSearchQueryList(queryStr);

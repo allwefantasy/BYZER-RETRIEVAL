@@ -98,6 +98,30 @@ public class RetrievalWorker {
     }
 
 
+    public boolean deleteByIds(String database, String table, String ids) throws Exception {
+        List<Object> id_list = Utils.toRecord(ids, List.class);
+        var searcher = getSearcher(database, table);
+        var tableSettings = searcher.tableSettings();
+
+        var schema = SchemaUtils.getSchema(tableSettings.schema());
+        var id_field = schema.fields().stream().filter(f -> f.name().equals("_id")).findFirst().orElseThrow(() -> new RuntimeException("Can not find _id field"));
+
+
+        try {
+            var queries = new Query[id_list.size()];
+            for (int i = 0; i < id_list.size(); i++) {
+                queries[i] = SchemaUtils.toLuceneQuery(id_field, id_list.get(i),null);
+            }
+            searcher.indexWriter().deleteDocuments(queries);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Utils.writeExceptionToFile(e);
+            return false;
+        }
+    }
+
+
     public Iterator<Document> iterateAllDocs(String database, String table) throws IOException {
         var searcher = getSearcher(database, table).searcherManager();
         final IndexSearcher indexSearcher = searcher.acquire();
