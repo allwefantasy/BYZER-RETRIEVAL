@@ -75,11 +75,11 @@ public class RetrievalWorker {
         NIOFSDirectory niofsDirectory = new NIOFSDirectory(indexLocation);
         writerConfig.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
         IndexWriter indexWriter = new IndexWriter(niofsDirectory, writerConfig);
-        SearcherManager manager = new SearcherManager(indexWriter, false, false, new SearcherFactory());
+        SearcherManager manager = new SearcherManager(indexWriter, true, false, new SearcherFactory());
 
         // start a thread to refresh the searcher every second
         final ControlledRealTimeReopenThread<IndexSearcher> nrtReopenThread =
-                new ControlledRealTimeReopenThread<>(indexWriter, manager, 1, 1);
+                new ControlledRealTimeReopenThread<>(indexWriter, manager, 1, 0.1);
         nrtReopenThread.setName(tableSettings.database() + " " + tableSettings.table() + " NRT Reopen Thread");
         nrtReopenThread.setPriority(Math.min(Thread.currentThread().getPriority() + 2, Thread.MAX_PRIORITY));
         nrtReopenThread.setDaemon(true);
@@ -315,7 +315,9 @@ public class RetrievalWorker {
     public long commit(String database, String table) throws Exception {
         var searcher = getSearcher(database, table);
         try {
-            return searcher.indexWriter().commit();
+            var v = searcher.indexWriter().commit();
+            searcher.searcherManager().maybeRefresh();
+            return v;
         } catch (Exception e) {
             e.printStackTrace();
             // Utils.writeExceptionToFile(e);
