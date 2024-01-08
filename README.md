@@ -17,7 +17,7 @@ Easy, fast, and cheap Storage for LLM
 
 *Latest News* 🔥
 
-- [2023/11] Release Byzer-Retrieval 0.1.4
+- [2024/01] Release Byzer-Retrieval 0.1.6
 
 ---
 
@@ -41,6 +41,13 @@ to improve the concurrency performance of cluster.
 ---  
 
 ## Versions
+
+### 0.1.6
+
+Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.6.tar.gz
+
+1. Make sure when commit is called,the SearcherManager be refreshed too.
+2. Set the default value `applyAllDeletes` to true when SearchManager is created.
 
 ### 0.1.4
 Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.4.tar.gz
