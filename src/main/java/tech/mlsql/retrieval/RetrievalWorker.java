@@ -14,7 +14,6 @@ import tech.mlsql.retrieval.batchserver.BatchServer;
 import tech.mlsql.retrieval.records.*;
 import tech.mlsql.retrieval.schema.SchemaUtils;
 import tech.mlsql.retrieval.schema.SimpleSchemaParser;
-import tech.mlsql.retrieval.schema.StructField;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -22,6 +21,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
 
 /**
  * 10/6/23 WilliamZhu(allwefantasy@gmail.com)
@@ -110,7 +110,7 @@ public class RetrievalWorker {
         try {
             var queries = new Query[id_list.size()];
             for (int i = 0; i < id_list.size(); i++) {
-                queries[i] = SchemaUtils.toLuceneQuery(id_field, id_list.get(i),null);
+                queries[i] = SchemaUtils.toLuceneQuery(id_field, id_list.get(i), null);
             }
             searcher.indexWriter().deleteDocuments(queries);
             return true;
@@ -277,6 +277,8 @@ public class RetrievalWorker {
 
             Utils.buildFilter(builder, query, searcher);
 
+            Query finalQuery = null;
+
             if (query.keyword().isPresent()) {
                 if (query.keyword().get().trim().equals("*")) {
                     builder.add(new MatchAllDocsQuery(), BooleanClause.Occur.SHOULD);
@@ -285,18 +287,30 @@ public class RetrievalWorker {
                             parse(query.keyword().get());
                     builder.add(parsedQuery, BooleanClause.Occur.SHOULD);
                 }
+                finalQuery = builder.build();
             }
-
+            
             if (query.vectorField().isPresent()) {
-                KnnFloatVectorQuery knnQuery =
-                        new KnnFloatVectorQuery(
-                                query.vectorField().get(),
-                                query.vector(),
-                                query.limit());
-                builder.add(knnQuery, BooleanClause.Occur.SHOULD);
-            }
 
-            var finalQuery = builder.build();
+                var tempFilter = builder.build();
+                Query targetFilter = null;
+                if (tempFilter.clauses().size() > 0) {
+                    targetFilter = tempFilter.clauses().get(0).getQuery();
+                }
+
+                if (targetFilter != null) {
+                    finalQuery = new KnnFloatVectorQuery(
+                            query.vectorField().get(),
+                            query.vector(),
+                            query.limit(),
+                            targetFilter);
+                } else {
+                    finalQuery = new KnnFloatVectorQuery(
+                            query.vectorField().get(),
+                            query.vector(),
+                            query.limit());
+                }
+            }
 
             TopDocs docs = indexSearcher.search(finalQuery, query.limit());
             for (ScoreDoc scoreDoc : docs.scoreDocs) {

@@ -160,6 +160,26 @@ public class Utils {
         }
     }
 
+    public static void writeLogToFile(String s) {
+        // write exception to file
+        var uuid = UUID.randomUUID().toString();
+        var exceptionFile = Paths.get("/tmp/byzer-retrieval.log");
+        if (!Files.exists(exceptionFile)) {
+            try {
+                Files.createFile(exceptionFile);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        // append log to file
+        try {
+            Files.writeString(exceptionFile, s + "\n", java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
     public static int murmurhash3_x86_32(String data) {
         var bytes = data.getBytes();
         var v = murmurhash3_x86_32(bytes, 0, bytes.length, 0);
@@ -268,7 +288,7 @@ public class Utils {
         if (filters.isEmpty()) {
             return;
         }
-        buildFilter(builder, filters, BooleanClause.Occur.MUST, searcher);
+        buildFilter(builder, filters, BooleanClause.Occur.FILTER, searcher);
     }
 
     public  static Optional<Sort> buidSort(SearchQuery sampleQuery, TableSettings tableSettings){
