@@ -100,10 +100,14 @@ Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.2.t
    ```python
    import ray
    from byzerllm.utils.retrieval import ByzerRetrieval
-      
-   code_search_path=["/home/winubuntu/softwares/byzer-retrieval-lib/"]
-   env_vars = {"JAVA_HOME": "/home/winubuntu/softwares/jdk-21",
-               "PATH":"/home/winubuntu/softwares/jdk-21/bin:/home/winubuntu/.cargo/bin:/usr/local/cuda/bin:/home/winubuntu/softwares/byzer-lang-all-in-one-linux-amd64-3.1.1-2.3.2/jdk8/bin:/home/winubuntu/miniconda3/envs/byzerllm-dev/bin:/home/winubuntu/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"}
+
+   ## !!!WARNING!!!: replace the code_search_path and env_vars with your own path and env_vars 
+   ## this is where your byzer-retrieval-lib is located in your Ray Cluster    
+   code_search_path=["YOUR_BYZER_RETRIEVAL_LIB_PATH"]
+   ## YOUR_JDK_21_PATH is the path of JDK-21 in your Ray Cluster     
+   ## You can get YOUR_OTHER_PATH by `echo $PATH` in the machine where you run the Ray Cluster
+   env_vars = {"JAVA_HOME": "YOUR_JDK_21_PATH",
+               "PATH":"YOUR_JDK_21_PATH/bin:YOUR_OTHER_PATH"}
    
    
    # Connect to ray. Notice that we should use job_config to configure the code_search_path and env_vars.
