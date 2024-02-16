@@ -42,6 +42,12 @@ to improve the concurrency performance of cluster.
 
 ## Versions
 
+### 0.1.10
+
+Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.10.tar.gz
+
+1. support 32k dimension size of vector field. 
+
 ### 0.1.9
 
 Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.9.tar.gz
