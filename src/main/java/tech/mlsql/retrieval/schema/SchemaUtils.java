@@ -4,6 +4,7 @@ import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.document.*;
+import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.VectorSimilarityFunction;
 import org.apache.lucene.queryparser.simple.SimpleQueryParser;
@@ -32,6 +33,13 @@ public class SchemaUtils {
         if (s.dataType() instanceof SingleType m) {
             if (m.name().equals("string") && s.analyze()) {
                 return List.of(new TextField(s.name(), (String) value, Field.Store.NO));
+            } else if (m.name().equals("string") && s.no_index()) {
+                FieldType notIndexedType = new FieldType();
+                notIndexedType.setIndexOptions(IndexOptions.NONE);
+                notIndexedType.setStored(true);
+                notIndexedType.setTokenized(false);
+                var v = new Field(s.name(), (String) value, notIndexedType);
+                return List.of(v);
             } else if (m.name().equals("string")) {
                 return List.of(new StringField(s.name(), (String) value, Field.Store.YES));
             } else if (m.name().equals("int")) {

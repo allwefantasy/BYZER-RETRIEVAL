@@ -4,6 +4,7 @@ import io.ray.api.ObjectRef;
 import io.ray.api.Ray;
 import org.apache.commons.io.FileUtils;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
+import org.apache.lucene.codecs.lucene95.XLucene95Codec;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.LongField;
 import org.apache.lucene.index.*;
@@ -74,7 +75,9 @@ public class RetrievalWorker {
 
         NIOFSDirectory niofsDirectory = new NIOFSDirectory(indexLocation);
         writerConfig.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
+        writerConfig.setCodec(new XLucene95Codec());
         IndexWriter indexWriter = new IndexWriter(niofsDirectory, writerConfig);
+
         SearcherManager manager = new SearcherManager(indexWriter, true, false, new SearcherFactory());
 
         // start a thread to refresh the searcher every second

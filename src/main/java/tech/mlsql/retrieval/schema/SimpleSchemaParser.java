@@ -75,11 +75,13 @@ public class SimpleSchemaParser {
                 var value = pair.second();
                 var analyze = false;
                 var sort = false;
+                var no_index= false;
                 if (pair.more().size() > 0) {
                     analyze = pair.more().get(0).equals("analyze");
                     sort = pair.more().get(0).equals("sort");
+                    no_index = pair.more().get(0).equals("no_index");
                 }
-                structType.fields().add(new StructField(name, _parse(value, structType), analyze, sort,true, new HashMap<String, Object>()));
+                structType.fields().add(new StructField(name, _parse(value, structType), analyze, sort,no_index,true, new HashMap<String, Object>()));
             }
             return structType;
         } else {

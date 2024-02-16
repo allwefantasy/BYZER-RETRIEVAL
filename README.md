@@ -17,7 +17,7 @@ Easy, fast, and cheap Storage for LLM
 
 *Latest News* 🔥
 
-- [2024/01] Release Byzer-Retrieval 0.1.7
+- [2024/02] Release Byzer-Retrieval 0.1.9
 
 ---
 
@@ -41,6 +41,12 @@ to improve the concurrency performance of cluster.
 ---  
 
 ## Versions
+
+### 0.1.9
+
+Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.9.tar.gz
+
+1. add no_index option in table schema.
 
 ### 0.1.7
 

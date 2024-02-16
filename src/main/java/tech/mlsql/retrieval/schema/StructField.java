@@ -11,6 +11,7 @@ public record StructField(String name,
                           DataType dataType,
                           boolean analyze,
                           boolean sort,
+                          boolean no_index,
                           boolean nullable, 
                           Map<String,Object> metadata) {
 }
