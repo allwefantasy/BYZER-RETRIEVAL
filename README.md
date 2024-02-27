@@ -42,6 +42,12 @@ to improve the concurrency performance of cluster.
 
 ## Versions
 
+### 0.1.11
+
+Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.11.tar.gz
+
+1. Support delete by term in the table
+
 ### 0.1.10
 
 Download: https://download.byzer.org/byzer-retrieval/byzer-retrieval-lib-0.1.10.tar.gz
