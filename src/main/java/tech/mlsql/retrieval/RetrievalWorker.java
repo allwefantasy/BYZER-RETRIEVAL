@@ -100,7 +100,28 @@ public class RetrievalWorker {
                 .get();
     }
 
+    public boolean deleteByFilter(String database, String table, String condition) throws Exception {
+        Map<String,Object> termValues = Utils.toRecord(condition, Map.class);
+        var searcher = getSearcher(database, table);
+        var tableSettings = searcher.tableSettings();
+        var keys = termValues.keySet();
+        var schema = SchemaUtils.getSchema(tableSettings.schema());
+        var fields_list = schema.fields().stream().filter(f -> keys.contains(f.name())).collect(Collectors.toList());
 
+
+        try {
+            var queries = new Query[fields_list.size()];
+            for (int i = 0; i < fields_list.size(); i++) {
+                queries[i] = SchemaUtils.toLuceneQuery(fields_list.get(i), termValues.get(fields_list.get(i).name()), null);
+            }
+            searcher.indexWriter().deleteDocuments(queries);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Utils.writeExceptionToFile(e);
+            return false;
+        }
+    }
     public boolean deleteByIds(String database, String table, String ids) throws Exception {
         List<Object> id_list = Utils.toRecord(ids, List.class);
         var searcher = getSearcher(database, table);

@@ -249,6 +249,16 @@ public class RetrievalMaster {
 
     }
 
+    public boolean deleteByFilter(String database, String table, String condition) throws Exception {
+        var tasks = new ArrayList<ObjectRef<Boolean>>();
+        for (var worker : this.workers) {
+            var ref = worker.task(RetrievalWorker::deleteByFilter, database, table, condition).remote();
+            tasks.add(ref);
+        }
+        Ray.get(tasks);
+        return true;
+    }
+
     public boolean deleteByIds(String database, String table, String ids) throws Exception {
         List<Object> idList = Utils.toRecord(ids, List.class);
         var tasks = new ArrayList<ObjectRef<Boolean>>();
