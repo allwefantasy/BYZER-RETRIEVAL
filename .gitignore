@@ -41,3 +41,7 @@ build/
 
 install.sh
 release.sh
+
+.auto-coder/
+actions/
+output.txt
