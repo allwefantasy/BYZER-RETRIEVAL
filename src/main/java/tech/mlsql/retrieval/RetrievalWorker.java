@@ -240,6 +240,35 @@ public class RetrievalWorker {
         return true;
     }
 
+    public boolean buildFromLocal(String database, String table, List<String> batchData) throws Exception {
+        var searcher = getSearcher(database, table);
+        var tableSettings = searcher.tableSettings();
+
+        var schema = SchemaUtils.getSchema(tableSettings.schema());
+
+        var indexWriter = searcher.indexWriter();
+        for (var dataStr : batchData) {
+            Document doc = new Document();
+            var data = Utils.toRecord(dataStr, Map.class);
+            for (var field : schema.fields()) {
+                var value = data.get(field.name());
+                if (value == null) {
+                    continue;
+                }
+                for (var v : SchemaUtils.toLuceneField(field, value)) {
+                    doc.add(v);
+                }
+            }
+            if (doc.getField("_id") instanceof LongField) {
+                LongField longField = (LongField) doc.getField("_id");
+                indexWriter.updateDocuments(LongField.newExactQuery("_id", (Long) longField.numericValue()), List.of(doc));
+            } else {
+                indexWriter.updateDocument(new Term("_id", data.get("_id").toString()), doc);
+            }
+        }
+        return true;
+    }
+
 
     public List<SearchResult> filter(String database, String table, String queryStr) throws Exception {
         var searcher = getSearcher(database, table);

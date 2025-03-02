@@ -46,6 +46,13 @@ public class LocalRetrievalMaster {
         throw new UnsupportedOperationException("Not supported in local mode");
     }
 
+    public boolean buildFromLocal(String database, String table, List<String> batchData) throws Exception {
+        for (var worker : workers) {
+            worker.buildFromLocal(database, table, batchData);
+        }
+        return true;
+    }
+
     public String filter(String queryStr) throws Exception {
         List<SearchQuery> queries = Utils.toSearchQueryList(queryStr);
         List<SearchResult> collectedResults = new ArrayList<>();
