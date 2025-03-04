@@ -150,57 +150,7 @@ public class RetrievalFlightServer {
                                 int start = dataVector.getOffsetBuffer().getInt(i * 4);
                                 int end = dataVector.getOffsetBuffer().getInt((i + 1) * 4);
                                 for (int j = start; j < end; j++) {
-                                    String jsonStr = new String(elementsVector.get(j));
-                                    // Parse JSON and validate against schema
-                                    Map<String, Object> doc = Utils.fromJson(jsonStr, Map.class);
-                                    TableSettings tableSettings = master.getClusterInfo().findTableSettings(database, table)
-                                            .orElseThrow(() -> new RuntimeException("Table not found"));
-                                    StructType schema = SchemaUtils.getSchema(tableSettings.schema());
-                                    
-                                    // Validate fields
-                                    for (StructField field : schema.fields()) {
-                                        if (!doc.containsKey(field.name())) {
-                                            throw new RuntimeException("Missing required field: " + field.name());
-                                        }
-                                        // Validate data types
-                                        Object value = doc.get(field.name());
-                                        if (field.dataType() instanceof SingleType) {
-                                            String typeName = ((SingleType) field.dataType()).name();
-                                            switch (typeName) {
-                                                case "string":
-                                                    if (!(value instanceof String)) {
-                                                        throw new RuntimeException("Field " + field.name() + " must be string");
-                                                    }
-                                                    break;
-                                                case "int":
-                                                    if (!(value instanceof Integer)) {
-                                                        throw new RuntimeException("Field " + field.name() + " must be integer");
-                                                    }
-                                                    break;
-                                                case "long":
-                                                    if (!(value instanceof Long || value instanceof Integer)) {
-                                                        throw new RuntimeException("Field " + field.name() + " must be long");
-                                                    }
-                                                    break;
-                                                case "float":
-                                                    if (!(value instanceof Float || value instanceof Double)) {
-                                                        throw new RuntimeException("Field " + field.name() + " must be float");
-                                                    }
-                                                    break;
-                                                case "double":
-                                                    if (!(value instanceof Double)) {
-                                                        throw new RuntimeException("Field " + field.name() + " must be double");
-                                                    }
-                                                    break;
-                                            }
-                                        } else if (field.dataType() instanceof ArrayType) {
-                                            if (!(value instanceof List)) {
-                                                throw new RuntimeException("Field " + field.name() + " must be array");
-                                            }
-                                        }
-                                    }
-                                    
-                                    batchDataList.add(jsonStr);
+                                    batchDataList.add(new String(elementsVector.get(j)));
                                 }
                             }
 
