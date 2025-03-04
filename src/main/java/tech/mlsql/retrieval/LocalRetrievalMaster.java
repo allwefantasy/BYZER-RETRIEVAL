@@ -29,6 +29,10 @@ public class LocalRetrievalMaster {
         logger.info("LocalRetrievalMaster initialized with {} workers", workers.size());
     }
 
+    public ClusterInfo getClusterInfo() {
+        return clusterInfo;
+    }
+
     public String clusterInfo() throws Exception {
         return Utils.toJson(clusterInfo);
     }

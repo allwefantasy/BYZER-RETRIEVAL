@@ -14,6 +14,7 @@ import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.Float4Vector;
 import tech.mlsql.retrieval.records.*;
+import tech.mlsql.retrieval.schema.SchemaUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -24,7 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
-import org.apache.arrow.vector.complex.ListVector;
+
 
 public class RetrievalFlightServer {
     private final LocalRetrievalMaster master;
@@ -149,14 +150,13 @@ public class RetrievalFlightServer {
                             String table = new String(tableVector.get(0));
 
                             // Get table schema to properly parse the JSON data
-                            Optional<TableSettings> tableSettings = master.clusterInfo.findTableSettings(database, table);
+                            Optional<TableSettings> tableSettings = master.getClusterInfo().findTableSettings(database, table);
                             if (!tableSettings.isPresent()) {
                                 throw new IllegalArgumentException("Table " + database + "." + table + " not found");
                             }
                             
                             String schemaStr = tableSettings.get().getSchema();
-                            tech.mlsql.retrieval.schema.StructType schema = 
-                                tech.mlsql.retrieval.schema.SchemaUtils.parseSchema(schemaStr);
+                            tech.mlsql.retrieval.schema.StructType schema = SchemaUtils.getSchema(schemaStr);
 
                             List<String> batchDataList = new ArrayList<>();
                             VarCharVector elementsVector = (VarCharVector) dataVector.getDataVector();
