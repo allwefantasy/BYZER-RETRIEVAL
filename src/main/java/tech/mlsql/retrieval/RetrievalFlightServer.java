@@ -165,6 +165,9 @@ public class RetrievalFlightServer {
                                 int end = dataVector.getOffsetBuffer().getInt((i + 1) * 4);
                                 for (int j = start; j < end; j++) {
                                     String jsonStr = new String(elementsVector.get(j));
+                                    // Validate the JSON against the schema
+                                    Map<String, Object> jsonObj = Utils.fromJson(jsonStr, Map.class);
+                                    SchemaUtils.validateRecord(schema, jsonObj);
                                     batchDataList.add(jsonStr);
                                 }
                             }
