@@ -189,6 +189,14 @@ public class Utils {
         return v;
     }
 
+    public static List<SearchResult> fromJsonToSearchResults(String json) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new Jdk8Module());
+        
+        // 定义嵌套结构的反序列化类型
+        return mapper.readValue(json, new TypeReference<List<SearchResult>>() {});
+    }
+
     public static int murmurhash3_x86_32(byte[] data, int offset, int len, int seed) {
         final int c1 = 0xcc9e2d51;
         final int c2 = 0x1b873593;
