@@ -28,6 +28,12 @@ public class Utils {
         mapper.registerModule(new Jdk8Module());
         return mapper.readValue(json, recordClass);
     }
+    
+    public static <T> T fromJson(String json, Class<T> clazz) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new Jdk8Module());
+        return mapper.readValue(json, clazz);
+    }
 
     public static List<SearchQuery> toSearchQueryList(String json) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();

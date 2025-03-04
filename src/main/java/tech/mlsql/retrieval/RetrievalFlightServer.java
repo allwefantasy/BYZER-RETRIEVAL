@@ -76,9 +76,15 @@ public class RetrievalFlightServer {
                 new Field("data",
                         FieldType.nullable(new org.apache.arrow.vector.types.pojo.ArrowType.List()),
                         Collections.singletonList(
-                                Field.notNullable("element", Types.MinorType.VARCHAR.getType())
+                                Field.notNullable("item", Types.MinorType.VARCHAR.getType())
                         )
                 )
+        ));
+        
+        private static final Schema SEARCH_SCHEMA = new Schema(Arrays.asList(
+                Field.nullable("database", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("table", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("query", Types.MinorType.VARCHAR.getType())
         ));
 
         public RetrievalFlightProducer(LocalRetrievalMaster master, BufferAllocator allocator) {
@@ -139,24 +145,21 @@ public class RetrievalFlightServer {
                             ArrowStreamReader reader = new ArrowStreamReader(
                                     new ByteArrayInputStream(action.getBody()), allocator);
                             reader.loadNextBatch();
-                            root.setRowCount(reader.getVectorSchemaRoot().getRowCount());
-
-                            VarCharVector databaseVector = (VarCharVector) root.getVector("database");
-                            VarCharVector tableVector = (VarCharVector) root.getVector("table");
+                            VectorSchemaRoot batchRoot = reader.getVectorSchemaRoot();
+                            
+                            VarCharVector databaseVector = (VarCharVector) batchRoot.getVector("database");
+                            VarCharVector tableVector = (VarCharVector) batchRoot.getVector("table");
                             org.apache.arrow.vector.complex.ListVector dataVector = 
-                                (org.apache.arrow.vector.complex.ListVector) root.getVector("data");
+                                (org.apache.arrow.vector.complex.ListVector) batchRoot.getVector("data");
 
                             String database = new String(databaseVector.get(0));
                             String table = new String(tableVector.get(0));
 
-                            // Get table schema to properly parse the JSON data
+                            // Get table settings to properly parse the JSON data
                             Optional<TableSettings> tableSettings = master.getClusterInfo().findTableSettings(database, table);
                             if (!tableSettings.isPresent()) {
                                 throw new IllegalArgumentException("Table " + database + "." + table + " not found");
                             }
-                            
-                            String schemaStr = tableSettings.get().getSchema();
-                            tech.mlsql.retrieval.schema.StructType schema = SchemaUtils.getSchema(schemaStr);
 
                             List<String> batchDataList = new ArrayList<>();
                             VarCharVector elementsVector = (VarCharVector) dataVector.getDataVector();
@@ -165,9 +168,6 @@ public class RetrievalFlightServer {
                                 int end = dataVector.getOffsetBuffer().getInt((i + 1) * 4);
                                 for (int j = start; j < end; j++) {
                                     String jsonStr = new String(elementsVector.get(j));
-                                    // Validate the JSON against the schema
-                                    Map<String, Object> jsonObj = Utils.fromJson(jsonStr, Map.class);
-                                    SchemaUtils.validateRecord(schema, jsonObj);
                                     batchDataList.add(jsonStr);
                                 }
                             }
@@ -177,6 +177,27 @@ public class RetrievalFlightServer {
                         }
                         break;
                     }
+                    case "Search": {
+                        try (VectorSchemaRoot root = VectorSchemaRoot.create(SEARCH_SCHEMA, allocator)) {
+                            ArrowStreamReader reader = new ArrowStreamReader(
+                                    new ByteArrayInputStream(action.getBody()), allocator);
+                            reader.loadNextBatch();
+                            VectorSchemaRoot batchRoot = reader.getVectorSchemaRoot();
+                            
+                            VarCharVector databaseVector = (VarCharVector) batchRoot.getVector("database");
+                            VarCharVector tableVector = (VarCharVector) batchRoot.getVector("table");
+                            VarCharVector queryVector = (VarCharVector) batchRoot.getVector("query");
+
+                            String database = new String(databaseVector.get(0));
+                            String table = new String(tableVector.get(0));
+                            String query = new String(queryVector.get(0));
+
+                            String searchResults = master.search(query);
+                            listener.onNext(new Result(searchResults.getBytes()));
+                        }
+                        break;
+                    }
+                    
                     case "Shutdown": {
                         master.shutdown();
                         listener.onNext(new Result("true".getBytes()));
