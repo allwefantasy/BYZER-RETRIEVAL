@@ -18,6 +18,7 @@ import tech.mlsql.retrieval.records.*;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,11 +34,11 @@ public class RetrievalFlightServer {
         try (BufferAllocator allocator = new RootAllocator()) {
             Location location = Location.forGrpcInsecure("0.0.0.0", 33333);
             FlightServer flightServer = FlightServer.builder(
-                    allocator, 
+                    allocator,
                     location,
                     new RetrievalFlightProducer(master, allocator)
             ).build();
-            
+
             flightServer.start();
             System.out.println("Arrow Flight Server started on port 33333");
             flightServer.awaitTermination();
@@ -49,29 +50,31 @@ public class RetrievalFlightServer {
     static class RetrievalFlightProducer extends NoOpFlightProducer {
         private final LocalRetrievalMaster master;
         private final BufferAllocator allocator;
-        
+
         // Define Arrow schemas for different actions
         private static final Schema CREATE_TABLE_SCHEMA = new Schema(Arrays.asList(
-            Field.nullable("database", Types.MinorType.VARCHAR.getType()),
-            Field.nullable("table", Types.MinorType.VARCHAR.getType()),
-            Field.nullable("schema", Types.MinorType.VARCHAR.getType()),
-            Field.nullable("location", Types.MinorType.VARCHAR.getType()),
-            Field.nullable("numShards", Types.MinorType.INT.getType())
+                Field.nullable("database", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("table", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("schema", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("location", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("numShards", Types.MinorType.INT.getType())
         ));
-        
+
         private static final Schema DELETE_BY_FILTER_SCHEMA = new Schema(Arrays.asList(
-            Field.nullable("database", Types.MinorType.VARCHAR.getType()),
-            Field.nullable("table", Types.MinorType.VARCHAR.getType()),
-            Field.nullable("condition", Types.MinorType.VARCHAR.getType())
+                Field.nullable("database", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("table", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("condition", Types.MinorType.VARCHAR.getType())
         ));
-        
+
         private static final Schema BUILD_FROM_LOCAL_SCHEMA = new Schema(Arrays.asList(
-            Field.nullable("database", Types.MinorType.VARCHAR.getType()),
-            Field.nullable("table", Types.MinorType.VARCHAR.getType()),
-            Field.nullable("data", 
-                new org.apache.arrow.vector.types.pojo.ArrowType.List(),
-                Field.nullable("element", Types.MinorType.VARCHAR.getType())
-            )
+                Field.nullable("database", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("table", Types.MinorType.VARCHAR.getType()),
+                new Field("data",
+                        FieldType.nullable(new org.apache.arrow.vector.types.pojo.ArrowType.List()),
+                        Collections.singletonList(
+                                Field.notNullable("element", Types.MinorType.VARCHAR.getType())
+                        )
+                )
         ));
 
         public RetrievalFlightProducer(LocalRetrievalMaster master, BufferAllocator allocator) {
@@ -86,10 +89,10 @@ public class RetrievalFlightServer {
                     case "CreateTable": {
                         try (VectorSchemaRoot root = VectorSchemaRoot.create(CREATE_TABLE_SCHEMA, allocator)) {
                             ArrowStreamReader reader = new ArrowStreamReader(
-                                new ByteArrayInputStream(action.getBody()), allocator);
+                                    new ByteArrayInputStream(action.getBody()), allocator);
                             reader.loadNextBatch();
                             root.setRowCount(reader.getVectorSchemaRoot().getRowCount());
-                            
+
                             VarCharVector databaseVector = (VarCharVector) root.getVector("database");
                             VarCharVector tableVector = (VarCharVector) root.getVector("table");
                             VarCharVector schemaVector = (VarCharVector) root.getVector("schema");
@@ -101,7 +104,7 @@ public class RetrievalFlightServer {
                             String schema = new String(schemaVector.get(0));
                             String location = new String(locationVector.get(0));
                             int numShards = numShardsVector.get(0);
-                            TableSettings tableSettings = new TableSettings(database,table,schema, location, numShards);
+                            TableSettings tableSettings = new TableSettings(database, table, schema, location, numShards);
                             boolean success = master.createTable(Utils.toJson(tableSettings));
                             listener.onNext(new Result(Boolean.toString(success).getBytes()));
                         }
@@ -110,10 +113,10 @@ public class RetrievalFlightServer {
                     case "DeleteByFilter": {
                         try (VectorSchemaRoot root = VectorSchemaRoot.create(DELETE_BY_FILTER_SCHEMA, allocator)) {
                             ArrowStreamReader reader = new ArrowStreamReader(
-                                new ByteArrayInputStream(action.getBody()), allocator);
+                                    new ByteArrayInputStream(action.getBody()), allocator);
                             reader.loadNextBatch();
                             root.setRowCount(reader.getVectorSchemaRoot().getRowCount());
-                            
+
                             VarCharVector databaseVector = (VarCharVector) root.getVector("database");
                             VarCharVector tableVector = (VarCharVector) root.getVector("table");
                             VarCharVector conditionVector = (VarCharVector) root.getVector("condition");
@@ -130,17 +133,17 @@ public class RetrievalFlightServer {
                     case "BuildFromLocal": {
                         try (VectorSchemaRoot root = VectorSchemaRoot.create(BUILD_FROM_LOCAL_SCHEMA, allocator)) {
                             ArrowStreamReader reader = new ArrowStreamReader(
-                                new ByteArrayInputStream(action.getBody()), allocator);
+                                    new ByteArrayInputStream(action.getBody()), allocator);
                             reader.loadNextBatch();
                             root.setRowCount(reader.getVectorSchemaRoot().getRowCount());
-                            
+
                             VarCharVector databaseVector = (VarCharVector) root.getVector("database");
                             VarCharVector tableVector = (VarCharVector) root.getVector("table");
                             ListVector dataVector = (ListVector) root.getVector("data");
 
                             String database = new String(databaseVector.get(0));
                             String table = new String(tableVector.get(0));
-                            
+
                             List<String> batchDataList = new ArrayList<>();
                             VarCharVector elementsVector = (VarCharVector) dataVector.getDataVector();
                             for (int i = 0; i < dataVector.getValueCount(); i++) {
@@ -179,14 +182,14 @@ public class RetrievalFlightServer {
 
                 // Create schema
                 Schema schema = new Schema(List.of(
-                    new Field("id", FieldType.nullable(new org.apache.arrow.vector.types.pojo.ArrowType.Utf8()), null),
-                    new Field("score", FieldType.nullable(new org.apache.arrow.vector.types.pojo.ArrowType.FloatingPoint(
-                        org.apache.arrow.vector.types.FloatingPointPrecision.SINGLE)), null)
+                        new Field("id", FieldType.nullable(new org.apache.arrow.vector.types.pojo.ArrowType.Utf8()), null),
+                        new Field("score", FieldType.nullable(new org.apache.arrow.vector.types.pojo.ArrowType.FloatingPoint(
+                                org.apache.arrow.vector.types.FloatingPointPrecision.SINGLE)), null)
                 ));
 
                 try (VectorSchemaRoot root = VectorSchemaRoot.create(schema, allocator)) {
                     listener.start(root);
-                    
+
                     VarCharVector idVector = (VarCharVector) root.getVector("id");
                     Float4Vector scoreVector = (Float4Vector) root.getVector("score");
 
@@ -210,7 +213,7 @@ public class RetrievalFlightServer {
             try {
                 String clusterInfo = master.clusterInfo();
                 Schema schema = new Schema(List.of(
-                    new Field("info", FieldType.nullable(new org.apache.arrow.vector.types.pojo.ArrowType.Utf8()), null)
+                        new Field("info", FieldType.nullable(new org.apache.arrow.vector.types.pojo.ArrowType.Utf8()), null)
                 ));
                 return new FlightInfo(schema, descriptor, List.of(new FlightEndpoint(new Ticket(descriptor.getPath().get(0).getBytes(StandardCharsets.UTF_8)))), -1, 1);
             } catch (Exception e) {
@@ -222,23 +225,23 @@ public class RetrievalFlightServer {
     public static void main(String[] args) throws IOException {
         // Initialize cluster settings
         ClusterSettings clusterSettings = new ClusterSettings(
-            "local",
+                "local",
                 "/tmp/cluster",
                 1
         );
         EnvSettings envSettings = new EnvSettings();
         JVMSettings jvmSettings = new JVMSettings(Utils.defaultJvmOptions());
         ResourceRequirementSettings resourceSettings = new ResourceRequirementSettings(
-            Arrays.asList(new ResourceRequirement("", 0.1))
+                Arrays.asList(new ResourceRequirement("", 0.1))
         );
-        
+
         ClusterInfo clusterInfo = new ClusterInfo(
-            clusterSettings,
-            jvmSettings,
-            envSettings,
-            resourceSettings
+                clusterSettings,
+                jvmSettings,
+                envSettings,
+                resourceSettings
         );
-        
+
         LocalRetrievalMaster master = new LocalRetrievalMaster(clusterInfo);
         new RetrievalFlightServer(master).start();
     }
