@@ -68,8 +68,7 @@ public class RetrievalFlightServer {
         private static final Schema BUILD_FROM_LOCAL_SCHEMA = new Schema(Arrays.asList(
             Field.nullable("database", Types.MinorType.VARCHAR.getType()),
             Field.nullable("table", Types.MinorType.VARCHAR.getType()),
-            Field.nullable("data", new org.apache.arrow.vector.types.pojo.ArrowType.List(), 
-                Field.nullable("data_element", Types.MinorType.VARCHAR.getType()))
+            Field.nullable("data", Types.MinorType.VARCHAR.getType())
         ));
 
         public RetrievalFlightProducer(LocalRetrievalMaster master, BufferAllocator allocator) {
@@ -134,18 +133,11 @@ public class RetrievalFlightServer {
                             
                             VarCharVector databaseVector = (VarCharVector) root.getVector("database");
                             VarCharVector tableVector = (VarCharVector) root.getVector("table");
-                            ListVector dataVector = (ListVector) root.getVector("data");
-                            VarCharVector dataElementsVector = (VarCharVector) dataVector.getDataVector();
+                            VarCharVector dataVector = (VarCharVector) root.getVector("data");
 
                             String database = new String(databaseVector.get(0));
                             String table = new String(tableVector.get(0));
-                            
-                            List<String> batchDataList = new ArrayList<>();
-                            int start = dataVector.getOffsetBuffer().getInt(0);
-                            int end = dataVector.getOffsetBuffer().getInt(4);
-                            for (int i = start; i < end; i++) {
-                                batchDataList.add(new String(dataElementsVector.get(i)));
-                            }
+                            List<String> batchDataList = Arrays.asList(new String(dataVector.get(0)).split("\u0000"));
 
                             boolean localBuildSuccess = master.buildFromLocal(database, table, batchDataList);
                             listener.onNext(new Result(Boolean.toString(localBuildSuccess).getBytes()));
