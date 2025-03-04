@@ -62,7 +62,7 @@ if __name__ == "__main__":
     {
         "type": "struct",
         "fields": [
-            {"name": "id", "type": "string"},
+            {"name": "_id", "type": "long"},
             {"name": "text", "type": "string", "analyze": true},
             {"name": "vector", "type": "array", "elementType": "float"}
         ]
@@ -75,12 +75,12 @@ if __name__ == "__main__":
     print("Building data...")
     data = [
         json.dumps({
-            "id": "doc1",
+            "_id": 0,
             "text": "This is a test document",
             "vector": [0.1, 0.2, 0.3]
         }),
         json.dumps({
-            "id": "doc2", 
+            "_id": 1, 
             "text": "Another test document",
             "vector": [0.4, 0.5, 0.6]
         })
