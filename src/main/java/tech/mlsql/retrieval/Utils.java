@@ -14,10 +14,7 @@ import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.SortField;
-import tech.mlsql.retrieval.records.ClusterSettings;
-import tech.mlsql.retrieval.records.SearchQuery;
-import tech.mlsql.retrieval.records.Searcher;
-import tech.mlsql.retrieval.records.TableSettings;
+import tech.mlsql.retrieval.records.*;
 import tech.mlsql.retrieval.schema.SchemaUtils;
 import tech.mlsql.retrieval.schema.StructField;
 
