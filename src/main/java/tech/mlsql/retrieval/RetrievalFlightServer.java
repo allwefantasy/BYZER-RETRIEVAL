@@ -105,7 +105,8 @@ public class RetrievalFlightServer {
         public void getStream(CallContext context, Ticket ticket, ServerStreamListener listener) {
             try {
                 String queryJson = new String(ticket.getBytes(), StandardCharsets.UTF_8);
-                List<SearchResult> results = master.search(queryJson);
+                String searchResultJson = master.search(queryJson);
+                List<SearchResult> results = Utils.toSearchResultList(searchResultJson);
 
                 // Create schema
                 Schema schema = new Schema(List.of(

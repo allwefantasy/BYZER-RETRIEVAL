@@ -316,3 +316,9 @@ public class Utils {
         return Optional.of(sort);
     }
 }
+
+    public static List<SearchResult> toSearchResultList(String json) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        List<Map<String, Object>> list = mapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
+        return list.stream().map(doc -> new SearchResult(doc, 1.0f)).collect(Collectors.toList());
+    }
