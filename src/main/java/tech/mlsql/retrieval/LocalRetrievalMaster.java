@@ -2,6 +2,8 @@ package tech.mlsql.retrieval;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.search.Sort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tech.mlsql.retrieval.records.*;
 import tech.mlsql.retrieval.schema.SchemaUtils;
 
@@ -12,14 +14,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class LocalRetrievalMaster {
+    private static final Logger logger = LoggerFactory.getLogger(LocalRetrievalMaster.class);
+    
     private List<RetrievalWorker> workers = new ArrayList<>();
     private ClusterInfo clusterInfo;
 
     public LocalRetrievalMaster(ClusterInfo clusterInfo) {
+        logger.info("Initializing LocalRetrievalMaster with cluster settings: {}", clusterInfo.clusterSettings());
         for (int i = 0; i < clusterInfo.clusterSettings().getNumNodes(); i++) {
+            logger.debug("Creating RetrievalWorker instance {}", i);
             workers.add(new RetrievalWorker(clusterInfo, i));
         }
         this.clusterInfo = clusterInfo;
+        logger.info("LocalRetrievalMaster initialized with {} workers", workers.size());
     }
 
     public String clusterInfo() throws Exception {
@@ -27,11 +34,16 @@ public class LocalRetrievalMaster {
     }
 
     public boolean createTable(String tableSettingStr) throws Exception {
+        logger.info("Creating table with settings: {}", tableSettingStr);
         var tableSettings = Utils.toRecord(tableSettingStr, TableSettings.class);
+        logger.debug("Parsed table settings: {}", tableSettings);
+        
         for (var worker : workers) {
+            logger.debug("Creating table on worker {}", workers.indexOf(worker));
             worker.createTable(tableSettings);
         }
         this.clusterInfo.tableSettingsList().add(tableSettings);
+        logger.info("Table created successfully");
         return true;
     }
 
@@ -47,9 +59,13 @@ public class LocalRetrievalMaster {
     }
 
     public boolean buildFromLocal(String database, String table, List<String> batchData) throws Exception {
+        logger.info("Building from local data for database: {}, table: {} with {} records", 
+            database, table, batchData.size());
         for (var worker : workers) {
+            logger.debug("Building data on worker {}", workers.indexOf(worker));
             worker.buildFromLocal(database, table, batchData);
         }
+        logger.info("Build from local completed successfully");
         return true;
     }
 
@@ -126,7 +142,9 @@ public class LocalRetrievalMaster {
     }
 
     public String search(String queryStr) throws Exception {
+        logger.debug("Received search request: {}", queryStr);
         List<SearchQuery> queries = Utils.toSearchQueryList(queryStr);
+        logger.debug("Parsed search queries: {}", queries);
         List<ScoreResult> scoreResults = new ArrayList<>();
 
         var sampleQuery = queries.get(0);
@@ -205,7 +223,9 @@ public class LocalRetrievalMaster {
             doc.put("_score", item.getValue());
             jsonResult.add(doc);
         }
-        return Utils.toJson(jsonResult);
+        String result = Utils.toJson(jsonResult);
+        logger.debug("Search completed with {} results", jsonResult.size());
+        return result;
     }
 
     private List<SearchResult> inner_search(String database, String table, SearchQuery searchQuery) throws Exception {
@@ -276,10 +296,13 @@ public class LocalRetrievalMaster {
     }
 
     public boolean closeAndDeleteFile(String database, String table) throws Exception {
+        logger.info("Closing and deleting file for database: {}, table: {}", database, table);
         for (var worker : workers) {
+            logger.debug("Closing and deleting file on worker {}", workers.indexOf(worker));
             worker.closeAndDeleteFile(database, table);
         }
         this.clusterInfo.removeTableSettings(database, table);
+        logger.info("Close and delete file completed successfully");
         return true;
     }
 
