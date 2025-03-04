@@ -31,7 +31,7 @@ class RetrievalClient:
     def build_from_local(self, database, table, data):
         database_arr = pa.array([database], type=pa.string())
         table_arr = pa.array([table], type=pa.string())
-        data_arr = pa.array(["\u0000".join(data)], type=pa.string())
+        data_arr = pa.array([data], type=pa.list_(pa.string()))
 
         batch = pa.RecordBatch.from_arrays(
             [database_arr, table_arr, data_arr],

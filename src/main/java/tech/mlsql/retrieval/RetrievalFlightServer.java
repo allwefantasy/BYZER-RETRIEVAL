@@ -68,7 +68,10 @@ public class RetrievalFlightServer {
         private static final Schema BUILD_FROM_LOCAL_SCHEMA = new Schema(Arrays.asList(
             Field.nullable("database", Types.MinorType.VARCHAR.getType()),
             Field.nullable("table", Types.MinorType.VARCHAR.getType()),
-            Field.nullable("data", Types.MinorType.VARCHAR.getType())
+            Field.nullable("data", 
+                new org.apache.arrow.vector.types.pojo.ArrowType.List(),
+                Field.nullable("element", Types.MinorType.VARCHAR.getType())
+            )
         ));
 
         public RetrievalFlightProducer(LocalRetrievalMaster master, BufferAllocator allocator) {
@@ -133,11 +136,20 @@ public class RetrievalFlightServer {
                             
                             VarCharVector databaseVector = (VarCharVector) root.getVector("database");
                             VarCharVector tableVector = (VarCharVector) root.getVector("table");
-                            VarCharVector dataVector = (VarCharVector) root.getVector("data");
+                            ListVector dataVector = (ListVector) root.getVector("data");
 
                             String database = new String(databaseVector.get(0));
                             String table = new String(tableVector.get(0));
-                            List<String> batchDataList = Arrays.asList(new String(dataVector.get(0)).split("\u0000"));
+                            
+                            List<String> batchDataList = new ArrayList<>();
+                            VarCharVector elementsVector = (VarCharVector) dataVector.getDataVector();
+                            for (int i = 0; i < dataVector.getValueCount(); i++) {
+                                int start = dataVector.getOffsetBuffer().getInt(i * 4);
+                                int end = dataVector.getOffsetBuffer().getInt((i + 1) * 4);
+                                for (int j = start; j < end; j++) {
+                                    batchDataList.add(new String(elementsVector.get(j)));
+                                }
+                            }
 
                             boolean localBuildSuccess = master.buildFromLocal(database, table, batchDataList);
                             listener.onNext(new Result(Boolean.toString(localBuildSuccess).getBytes()));
