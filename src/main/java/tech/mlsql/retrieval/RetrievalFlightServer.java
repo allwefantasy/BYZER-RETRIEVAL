@@ -9,11 +9,13 @@ import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.Float4Vector;
-import tech.mlsql.retrieval.records.SearchResult;
+import tech.mlsql.retrieval.records.*;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class RetrievalFlightServer {
     private final LocalRetrievalMaster master;
@@ -100,17 +102,7 @@ public class RetrievalFlightServer {
                         listener.onNext(new Result(Boolean.toString(buildSuccess).getBytes(StandardCharsets.UTF_8)));
                         listener.onCompleted();
                         break;
-                    case "BuildFromRayObjectStore":
-                        // Split by special delimiter since data contains newlines
-                        String[] rayBuildParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\u0000");
-                        String database = rayBuildParams[0];
-                        String table = rayBuildParams[1];
-                        byte[][] batchData = Utils.fromJson(rayBuildParams[2], byte[][].class);
-                        byte[][] locations = Utils.fromJson(rayBuildParams[3], byte[][].class);
-                        boolean rayBuildSuccess = master.buildFromRayObjectStore(database, table, batchData, locations);
-                        listener.onNext(new Result(Boolean.toString(rayBuildSuccess).getBytes(StandardCharsets.UTF_8)));
-                        listener.onCompleted();
-                        break;
+                        
                     case "BuildFromLocal":
                         String[] localBuildParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
                         List<String> batchDataList = Arrays.asList(localBuildParams[2].split("\u0000"));
@@ -182,19 +174,22 @@ public class RetrievalFlightServer {
 
     public static void main(String[] args) throws IOException {
         // Initialize cluster settings
-        ClusterSettings clusterSettings = new ClusterSettings(1); // 1 node for local mode
+        ClusterSettings clusterSettings = new ClusterSettings(
+            "local",
+                "/tmp/cluster",
+                1
+        );
         EnvSettings envSettings = new EnvSettings();
         JVMSettings jvmSettings = new JVMSettings(Utils.defaultJvmOptions());
         ResourceRequirementSettings resourceSettings = new ResourceRequirementSettings(
-            new ResourceRequirement(1, 1024) // 1 core, 1024MB memory
+            Arrays.asList(new ResourceRequirement("", 0.1))
         );
         
         ClusterInfo clusterInfo = new ClusterInfo(
-            clusterSettings, 
-            envSettings, 
-            jvmSettings, 
-            resourceSettings, 
-            new ArrayList<>()
+            clusterSettings,
+            jvmSettings,
+            envSettings,
+            resourceSettings
         );
         
         LocalRetrievalMaster master = new LocalRetrievalMaster(clusterInfo);
