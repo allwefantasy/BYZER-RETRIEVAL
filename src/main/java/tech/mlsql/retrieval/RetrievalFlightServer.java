@@ -8,6 +8,7 @@ import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
+import org.apache.arrow.vector.Float4Vector;
 import tech.mlsql.retrieval.records.SearchResult;
 
 import java.io.IOException;
@@ -118,7 +119,7 @@ public class RetrievalFlightServer {
                     listener.start(root);
                     
                     VarCharVector idVector = (VarCharVector) root.getVector("id");
-                    FloatVector scoreVector = (FloatVector) root.getVector("score");
+                    Float4Vector scoreVector = (Float4Vector) root.getVector("score");
 
                     // Fill data
                     for (SearchResult result : results) {
@@ -131,7 +132,7 @@ public class RetrievalFlightServer {
                     listener.completed();
                 }
             } catch (Exception e) {
-                listener.onError(CallStatus.INTERNAL.withDescription(e.getMessage()).toRuntimeException());
+                listener.error(CallStatus.INTERNAL.withDescription(e.getMessage()).toRuntimeException());
             }
         }
 
