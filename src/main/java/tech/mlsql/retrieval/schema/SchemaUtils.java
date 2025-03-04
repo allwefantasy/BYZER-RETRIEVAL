@@ -17,6 +17,7 @@ import tech.mlsql.retrieval.schema.types.SingleType;
 
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 11/10/23 WilliamZhu(allwefantasy@gmail.com)
@@ -124,6 +125,19 @@ public class SchemaUtils {
     public static StructType getSchema(String schemaStr) {
         var schema = new SimpleSchemaParser().parse(schemaStr);
         return schema;
+    }
+    
+    public static void validateRecord(StructType schema, Map<String, Object> record) {
+        // Validate that all required fields are present
+        for (StructField field : schema.fields()) {
+            String fieldName = field.name();
+            if (!record.containsKey(fieldName)) {
+                throw new IllegalArgumentException("Required field missing: " + fieldName);
+            }
+            
+            // Type validation could be added here for more complex validation
+            // This is a simple presence check
+        }
     }
 
     public static SortField toSortField(StructField s, boolean reverse) {

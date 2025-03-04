@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
+import java.io.IOException;
 import io.ray.api.ObjectRef;
 import io.ray.api.Ray;
 import io.ray.api.id.ObjectId;
@@ -27,6 +28,12 @@ public class Utils {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new Jdk8Module());
         return mapper.readValue(json, recordClass);
+    }
+    
+    public static <T> T fromJson(String json, Class<T> valueType) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new Jdk8Module());
+        return mapper.readValue(json, valueType);
     }
 
     public static List<SearchQuery> toSearchQueryList(String json) throws JsonProcessingException {
