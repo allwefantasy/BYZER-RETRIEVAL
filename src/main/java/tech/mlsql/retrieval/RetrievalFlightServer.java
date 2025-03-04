@@ -50,11 +50,51 @@ public class RetrievalFlightServer {
         @Override
         public void doAction(CallContext context, Action action, StreamListener<Result> listener) {
             try {
-                if (action.getType().equals("CreateTable")) {
-                    String json = new String(action.getBody(), StandardCharsets.UTF_8);
-                    boolean success = master.createTable(json);
-                    listener.onNext(new Result(Boolean.toString(success).getBytes(StandardCharsets.UTF_8)));
-                    listener.onCompleted();
+                switch (action.getType()) {
+                    case "CreateTable":
+                        String json = new String(action.getBody(), StandardCharsets.UTF_8);
+                        boolean success = master.createTable(json);
+                        listener.onNext(new Result(Boolean.toString(success).getBytes(StandardCharsets.UTF_8)));
+                        listener.onCompleted();
+                        break;
+                    case "DeleteByFilter":
+                        String[] params = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
+                        boolean deleteSuccess = master.deleteByFilter(params[0], params[1], params[2]);
+                        listener.onNext(new Result(Boolean.toString(deleteSuccess).getBytes(StandardCharsets.UTF_8)));
+                        listener.onCompleted();
+                        break;
+                    case "DeleteByIds":
+                        String[] idsParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
+                        boolean deleteIdsSuccess = master.deleteByIds(idsParams[0], idsParams[1], idsParams[2]);
+                        listener.onNext(new Result(Boolean.toString(deleteIdsSuccess).getBytes(StandardCharsets.UTF_8)));
+                        listener.onCompleted();
+                        break;
+                    case "Commit":
+                        String[] commitParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
+                        boolean commitSuccess = master.commit(commitParams[0], commitParams[1]);
+                        listener.onNext(new Result(Boolean.toString(commitSuccess).getBytes(StandardCharsets.UTF_8)));
+                        listener.onCompleted();
+                        break;
+                    case "Truncate":
+                        String[] truncateParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
+                        boolean truncateSuccess = master.truncate(truncateParams[0], truncateParams[1]);
+                        listener.onNext(new Result(Boolean.toString(truncateSuccess).getBytes(StandardCharsets.UTF_8)));
+                        listener.onCompleted();
+                        break;
+                    case "Close":
+                        String[] closeParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
+                        boolean closeSuccess = master.close(closeParams[0], closeParams[1]);
+                        listener.onNext(new Result(Boolean.toString(closeSuccess).getBytes(StandardCharsets.UTF_8)));
+                        listener.onCompleted();
+                        break;
+                    case "CloseAndDeleteFile":
+                        String[] deleteParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
+                        boolean deleteFileSuccess = master.closeAndDeleteFile(deleteParams[0], deleteParams[1]);
+                        listener.onNext(new Result(Boolean.toString(deleteFileSuccess).getBytes(StandardCharsets.UTF_8)));
+                        listener.onCompleted();
+                        break;
+                    default:
+                        listener.onError(CallStatus.INVALID_ARGUMENT.withDescription("Unknown action type").toRuntimeException());
                 }
             } catch (Exception e) {
                 listener.onError(CallStatus.INTERNAL.withDescription(e.getMessage()).toRuntimeException());
@@ -92,6 +132,19 @@ public class RetrievalFlightServer {
                 }
             } catch (Exception e) {
                 listener.onError(CallStatus.INTERNAL.withDescription(e.getMessage()).toRuntimeException());
+            }
+        }
+
+        @Override
+        public FlightInfo getFlightInfo(CallContext context, FlightDescriptor descriptor) {
+            try {
+                String clusterInfo = master.clusterInfo();
+                Schema schema = new Schema(List.of(
+                    new Field("info", FieldType.nullable(new org.apache.arrow.vector.types.pojo.ArrowType.Utf8()), null)
+                ));
+                return new FlightInfo(schema, descriptor, List.of(new FlightEndpoint(new Ticket(descriptor.getPath().get(0).getBytes(StandardCharsets.UTF_8)))), -1, 1);
+            } catch (Exception e) {
+                throw CallStatus.INTERNAL.withDescription(e.getMessage()).toRuntimeException();
             }
         }
     }
