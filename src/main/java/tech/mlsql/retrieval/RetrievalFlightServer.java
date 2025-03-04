@@ -44,6 +44,27 @@ public class RetrievalFlightServer {
     static class RetrievalFlightProducer extends NoOpFlightProducer {
         private final LocalRetrievalMaster master;
         private final BufferAllocator allocator;
+        
+        // Define Arrow schemas for different actions
+        private static final Schema CREATE_TABLE_SCHEMA = new Schema(Arrays.asList(
+            Field.nullable("database", Types.MinorType.VARCHAR.getType()),
+            Field.nullable("table", Types.MinorType.VARCHAR.getType()),
+            Field.nullable("schema", Types.MinorType.VARCHAR.getType()),
+            Field.nullable("location", Types.MinorType.VARCHAR.getType()),
+            Field.nullable("numShards", Types.MinorType.INT.getType())
+        ));
+        
+        private static final Schema DELETE_BY_FILTER_SCHEMA = new Schema(Arrays.asList(
+            Field.nullable("database", Types.MinorType.VARCHAR.getType()),
+            Field.nullable("table", Types.MinorType.VARCHAR.getType()),
+            Field.nullable("condition", Types.MinorType.VARCHAR.getType())
+        ));
+        
+        private static final Schema BUILD_FROM_LOCAL_SCHEMA = new Schema(Arrays.asList(
+            Field.nullable("database", Types.MinorType.VARCHAR.getType()),
+            Field.nullable("table", Types.MinorType.VARCHAR.getType()),
+            Field.nullable("data", Types.MinorType.VARCHAR.getType())
+        ));
 
         public RetrievalFlightProducer(LocalRetrievalMaster master, BufferAllocator allocator) {
             this.master = master;
@@ -52,66 +73,81 @@ public class RetrievalFlightServer {
 
         @Override
         public void doAction(CallContext context, Action action, StreamListener<Result> listener) {
-            try {
+            try (BufferAllocator allocator = new RootAllocator()) {
                 switch (action.getType()) {
-                    case "CreateTable":
-                        String json = new String(action.getBody(), StandardCharsets.UTF_8);
-                        boolean success = master.createTable(json);
-                        listener.onNext(new Result(Boolean.toString(success).getBytes(StandardCharsets.UTF_8)));
-                        listener.onCompleted();
-                        break;
-                    case "DeleteByFilter":
-                        String[] params = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
-                        boolean deleteSuccess = master.deleteByFilter(params[0], params[1], params[2]);
-                        listener.onNext(new Result(Boolean.toString(deleteSuccess).getBytes(StandardCharsets.UTF_8)));
-                        listener.onCompleted();
-                        break;
-                    case "DeleteByIds":
-                        String[] idsParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
-                        boolean deleteIdsSuccess = master.deleteByIds(idsParams[0], idsParams[1], idsParams[2]);
-                        listener.onNext(new Result(Boolean.toString(deleteIdsSuccess).getBytes(StandardCharsets.UTF_8)));
-                        listener.onCompleted();
-                        break;
-                    case "Commit":
-                        String[] commitParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
-                        boolean commitSuccess = master.commit(commitParams[0], commitParams[1]);
-                        listener.onNext(new Result(Boolean.toString(commitSuccess).getBytes(StandardCharsets.UTF_8)));
-                        listener.onCompleted();
-                        break;
-                    case "Truncate":
-                        String[] truncateParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
-                        boolean truncateSuccess = master.truncate(truncateParams[0], truncateParams[1]);
-                        listener.onNext(new Result(Boolean.toString(truncateSuccess).getBytes(StandardCharsets.UTF_8)));
-                        listener.onCompleted();
-                        break;
-                    case "Close":
-                        String[] closeParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
-                        boolean closeSuccess = master.close(closeParams[0], closeParams[1]);
-                        listener.onNext(new Result(Boolean.toString(closeSuccess).getBytes(StandardCharsets.UTF_8)));
-                        listener.onCompleted();
-                        break;
-                    case "CloseAndDeleteFile":
-                        String[] deleteParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
-                        boolean deleteFileSuccess = master.closeAndDeleteFile(deleteParams[0], deleteParams[1]);
-                        listener.onNext(new Result(Boolean.toString(deleteFileSuccess).getBytes(StandardCharsets.UTF_8)));
-                        listener.onCompleted();
-                        break;
+                    case "CreateTable": {
+                        try (VectorSchemaRoot root = VectorSchemaRoot.create(CREATE_TABLE_SCHEMA, allocator)) {
+                            ArrowStreamReader reader = new ArrowStreamReader(
+                                new ByteArrayInputStream(action.getBody()), allocator);
+                            reader.loadNextBatch();
+                            root.setRowCount(reader.getVectorSchemaRoot().getRowCount());
+                            
+                            VarCharVector databaseVector = (VarCharVector) root.getVector("database");
+                            VarCharVector tableVector = (VarCharVector) root.getVector("table");
+                            VarCharVector schemaVector = (VarCharVector) root.getVector("schema");
+                            VarCharVector locationVector = (VarCharVector) root.getVector("location");
+                            IntVector numShardsVector = (IntVector) root.getVector("numShards");
 
-                    case "BuildFromLocal":
-                        String[] localBuildParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
-                        List<String> batchDataList = Arrays.asList(localBuildParams[2].split("\u0000"));
-                        boolean localBuildSuccess = master.buildFromLocal(localBuildParams[0], localBuildParams[1], batchDataList);
-                        listener.onNext(new Result(Boolean.toString(localBuildSuccess).getBytes(StandardCharsets.UTF_8)));
-                        listener.onCompleted();
+                            String database = new String(databaseVector.get(0));
+                            String table = new String(tableVector.get(0));
+                            String schema = new String(schemaVector.get(0));
+                            String location = new String(locationVector.get(0));
+                            int numShards = numShardsVector.get(0);
+
+                            boolean success = master.createTable(database, table, schema, location, numShards);
+                            listener.onNext(new Result(Boolean.toString(success).getBytes()));
+                        }
                         break;
-                    case "Shutdown":
+                    }
+                    case "DeleteByFilter": {
+                        try (VectorSchemaRoot root = VectorSchemaRoot.create(DELETE_BY_FILTER_SCHEMA, allocator)) {
+                            ArrowStreamReader reader = new ArrowStreamReader(
+                                new ByteArrayInputStream(action.getBody()), allocator);
+                            reader.loadNextBatch();
+                            root.setRowCount(reader.getVectorSchemaRoot().getRowCount());
+                            
+                            VarCharVector databaseVector = (VarCharVector) root.getVector("database");
+                            VarCharVector tableVector = (VarCharVector) root.getVector("table");
+                            VarCharVector conditionVector = (VarCharVector) root.getVector("condition");
+
+                            String database = new String(databaseVector.get(0));
+                            String table = new String(tableVector.get(0));
+                            String condition = new String(conditionVector.get(0));
+
+                            boolean deleteSuccess = master.deleteByFilter(database, table, condition);
+                            listener.onNext(new Result(Boolean.toString(deleteSuccess).getBytes()));
+                        }
+                        break;
+                    }
+                    case "BuildFromLocal": {
+                        try (VectorSchemaRoot root = VectorSchemaRoot.create(BUILD_FROM_LOCAL_SCHEMA, allocator)) {
+                            ArrowStreamReader reader = new ArrowStreamReader(
+                                new ByteArrayInputStream(action.getBody()), allocator);
+                            reader.loadNextBatch();
+                            root.setRowCount(reader.getVectorSchemaRoot().getRowCount());
+                            
+                            VarCharVector databaseVector = (VarCharVector) root.getVector("database");
+                            VarCharVector tableVector = (VarCharVector) root.getVector("table");
+                            VarCharVector dataVector = (VarCharVector) root.getVector("data");
+
+                            String database = new String(databaseVector.get(0));
+                            String table = new String(tableVector.get(0));
+                            List<String> batchDataList = Arrays.asList(new String(dataVector.get(0)).split("\u0000"));
+
+                            boolean localBuildSuccess = master.buildFromLocal(database, table, batchDataList);
+                            listener.onNext(new Result(Boolean.toString(localBuildSuccess).getBytes()));
+                        }
+                        break;
+                    }
+                    case "Shutdown": {
                         master.shutdown();
-                        listener.onNext(new Result("true".getBytes(StandardCharsets.UTF_8)));
-                        listener.onCompleted();
+                        listener.onNext(new Result("true".getBytes()));
                         break;
+                    }
                     default:
                         listener.onError(CallStatus.INVALID_ARGUMENT.withDescription("Unknown action type").toRuntimeException());
                 }
+                listener.onCompleted();
             } catch (Exception e) {
                 listener.onError(CallStatus.INTERNAL.withDescription(e.getMessage()).toRuntimeException());
             }

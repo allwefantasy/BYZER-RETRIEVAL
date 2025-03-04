@@ -8,20 +8,42 @@ class RetrievalClient:
         self.client = flight.FlightClient(self.location)
         
     def create_table(self, database, table, schema, location, num_shards=1):
-        table_settings = {
-            "database": database,
-            "table": table,
-            "schema": schema,
-            "location": location,
-            "num_shards": num_shards
-        }
-        action = flight.Action("CreateTable", json.dumps(table_settings).encode())
+        database_arr = pa.array([database], type=pa.string())
+        table_arr = pa.array([table], type=pa.string())
+        schema_arr = pa.array([schema], type=pa.string())
+        location_arr = pa.array([location], type=pa.string())
+        num_shards_arr = pa.array([num_shards], type=pa.int32())
+
+        batch = pa.RecordBatch.from_arrays(
+            [database_arr, table_arr, schema_arr, location_arr, num_shards_arr],
+            names=["database", "table", "schema", "location", "numShards"]
+        )
+        
+        sink = pa.BufferOutputStream()
+        with pa.ipc.new_stream(sink, batch.schema) as writer:
+            writer.write_batch(batch)
+        arrow_data = sink.getvalue()
+
+        action = flight.Action("CreateTable", arrow_data)
         result = self.client.do_action(action)
         return json.loads(next(result).body.to_pybytes().decode())
     
     def build_from_local(self, database, table, data):
-        params = [database, table, "\u0000".join(data)]
-        action = flight.Action("BuildFromLocal", "\n".join(params).encode())
+        database_arr = pa.array([database], type=pa.string())
+        table_arr = pa.array([table], type=pa.string())
+        data_arr = pa.array(["\u0000".join(data)], type=pa.string())
+
+        batch = pa.RecordBatch.from_arrays(
+            [database_arr, table_arr, data_arr],
+            names=["database", "table", "data"]
+        )
+        
+        sink = pa.BufferOutputStream()
+        with pa.ipc.new_stream(sink, batch.schema) as writer:
+            writer.write_batch(batch)
+        arrow_data = sink.getvalue()
+
+        action = flight.Action("BuildFromLocal", arrow_data)
         result = self.client.do_action(action)
         return json.loads(next(result).body.to_pybytes().decode())
     
