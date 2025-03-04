@@ -22,6 +22,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.Optional;
+import org.apache.arrow.vector.complex.ListVector;
 
 public class RetrievalFlightServer {
     private final LocalRetrievalMaster master;
@@ -139,10 +142,21 @@ public class RetrievalFlightServer {
 
                             VarCharVector databaseVector = (VarCharVector) root.getVector("database");
                             VarCharVector tableVector = (VarCharVector) root.getVector("table");
-                            ListVector dataVector = (ListVector) root.getVector("data");
+                            org.apache.arrow.vector.complex.ListVector dataVector = 
+                                (org.apache.arrow.vector.complex.ListVector) root.getVector("data");
 
                             String database = new String(databaseVector.get(0));
                             String table = new String(tableVector.get(0));
+
+                            // Get table schema to properly parse the JSON data
+                            Optional<TableSettings> tableSettings = master.clusterInfo.findTableSettings(database, table);
+                            if (!tableSettings.isPresent()) {
+                                throw new IllegalArgumentException("Table " + database + "." + table + " not found");
+                            }
+                            
+                            String schemaStr = tableSettings.get().getSchema();
+                            tech.mlsql.retrieval.schema.StructType schema = 
+                                tech.mlsql.retrieval.schema.SchemaUtils.parseSchema(schemaStr);
 
                             List<String> batchDataList = new ArrayList<>();
                             VarCharVector elementsVector = (VarCharVector) dataVector.getDataVector();
@@ -150,7 +164,11 @@ public class RetrievalFlightServer {
                                 int start = dataVector.getOffsetBuffer().getInt(i * 4);
                                 int end = dataVector.getOffsetBuffer().getInt((i + 1) * 4);
                                 for (int j = start; j < end; j++) {
-                                    batchDataList.add(new String(elementsVector.get(j)));
+                                    String jsonStr = new String(elementsVector.get(j));
+                                    // Validate the JSON against the schema
+                                    Map<String, Object> jsonObj = Utils.fromJson(jsonStr, Map.class);
+                                    SchemaUtils.validateRecord(schema, jsonObj);
+                                    batchDataList.add(jsonStr);
                                 }
                             }
 
