@@ -1,16 +1,21 @@
 package tech.mlsql.retrieval;
 
+import com.google.flatbuffers.Table;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
+import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.ipc.ArrowStreamReader;
+import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.Float4Vector;
 import tech.mlsql.retrieval.records.*;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -93,8 +98,8 @@ public class RetrievalFlightServer {
                             String schema = new String(schemaVector.get(0));
                             String location = new String(locationVector.get(0));
                             int numShards = numShardsVector.get(0);
-
-                            boolean success = master.createTable(database, table, schema, location, numShards);
+                            TableSettings tableSettings = new TableSettings(database,table,schema, location, numShards);
+                            boolean success = master.createTable(Utils.toJson(tableSettings));
                             listener.onNext(new Result(Boolean.toString(success).getBytes()));
                         }
                         break;
