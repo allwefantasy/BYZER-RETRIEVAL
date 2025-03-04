@@ -94,6 +94,35 @@ public class RetrievalFlightServer {
                         listener.onNext(new Result(Boolean.toString(deleteFileSuccess).getBytes(StandardCharsets.UTF_8)));
                         listener.onCompleted();
                         break;
+                    case "Build":
+                        String[] buildParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
+                        boolean buildSuccess = master.build(buildParams[0], buildParams[1], buildParams[2]);
+                        listener.onNext(new Result(Boolean.toString(buildSuccess).getBytes(StandardCharsets.UTF_8)));
+                        listener.onCompleted();
+                        break;
+                    case "BuildFromRayObjectStore":
+                        // Split by special delimiter since data contains newlines
+                        String[] rayBuildParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\u0000");
+                        String database = rayBuildParams[0];
+                        String table = rayBuildParams[1];
+                        byte[][] batchData = Utils.fromJson(rayBuildParams[2], byte[][].class);
+                        byte[][] locations = Utils.fromJson(rayBuildParams[3], byte[][].class);
+                        boolean rayBuildSuccess = master.buildFromRayObjectStore(database, table, batchData, locations);
+                        listener.onNext(new Result(Boolean.toString(rayBuildSuccess).getBytes(StandardCharsets.UTF_8)));
+                        listener.onCompleted();
+                        break;
+                    case "BuildFromLocal":
+                        String[] localBuildParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
+                        List<String> batchDataList = Arrays.asList(localBuildParams[2].split("\u0000"));
+                        boolean localBuildSuccess = master.buildFromLocal(localBuildParams[0], localBuildParams[1], batchDataList);
+                        listener.onNext(new Result(Boolean.toString(localBuildSuccess).getBytes(StandardCharsets.UTF_8)));
+                        listener.onCompleted();
+                        break;
+                    case "Shutdown":
+                        master.shutdown();
+                        listener.onNext(new Result("true".getBytes(StandardCharsets.UTF_8)));
+                        listener.onCompleted();
+                        break;
                     default:
                         listener.onError(CallStatus.INVALID_ARGUMENT.withDescription("Unknown action type").toRuntimeException());
                 }
@@ -152,7 +181,23 @@ public class RetrievalFlightServer {
     }
 
     public static void main(String[] args) throws IOException {
-        LocalRetrievalMaster master = new LocalRetrievalMaster(...); // 初始化你的LocalRetrievalMaster
+        // Initialize cluster settings
+        ClusterSettings clusterSettings = new ClusterSettings(1); // 1 node for local mode
+        EnvSettings envSettings = new EnvSettings();
+        JVMSettings jvmSettings = new JVMSettings(Utils.defaultJvmOptions());
+        ResourceRequirementSettings resourceSettings = new ResourceRequirementSettings(
+            new ResourceRequirement(1, 1024) // 1 core, 1024MB memory
+        );
+        
+        ClusterInfo clusterInfo = new ClusterInfo(
+            clusterSettings, 
+            envSettings, 
+            jvmSettings, 
+            resourceSettings, 
+            new ArrayList<>()
+        );
+        
+        LocalRetrievalMaster master = new LocalRetrievalMaster(clusterInfo);
         new RetrievalFlightServer(master).start();
     }
 }
