@@ -125,7 +125,7 @@ public class LocalRetrievalMaster {
         return true;
     }
 
-    public String search(String queryStr) throws Exception {
+    public List<SearchResult> search(String queryStr) throws Exception {
         List<SearchQuery> queries = Utils.toSearchQueryList(queryStr);
         List<ScoreResult> scoreResults = new ArrayList<>();
 
@@ -199,13 +199,15 @@ public class LocalRetrievalMaster {
         }
         var finalScoresList = newScoresList.subList(0, limit);
 
-        var jsonResult = new ArrayList<Map<String, Object>>();
+        List<Map<String, Object>> jsonResult = new ArrayList<>();
         for (var item : finalScoresList) {
             var doc = idToDocs.get(item.getKey());
             doc.put("_score", item.getValue());
             jsonResult.add(doc);
         }
-        return Utils.toJson(jsonResult);
+        return jsonResult.stream()
+                .map(doc -> new SearchResult(doc, (Float) doc.get("_score")))
+                .collect(Collectors.toList());
     }
 
     private List<SearchResult> inner_search(String database, String table, SearchQuery searchQuery) throws Exception {
