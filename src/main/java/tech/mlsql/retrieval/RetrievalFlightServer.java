@@ -96,13 +96,7 @@ public class RetrievalFlightServer {
                         listener.onNext(new Result(Boolean.toString(deleteFileSuccess).getBytes(StandardCharsets.UTF_8)));
                         listener.onCompleted();
                         break;
-                    case "Build":
-                        String[] buildParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
-                        boolean buildSuccess = master.build(buildParams[0], buildParams[1], buildParams[2]);
-                        listener.onNext(new Result(Boolean.toString(buildSuccess).getBytes(StandardCharsets.UTF_8)));
-                        listener.onCompleted();
-                        break;
-                        
+
                     case "BuildFromLocal":
                         String[] localBuildParams = new String(action.getBody(), StandardCharsets.UTF_8).split("\n");
                         List<String> batchDataList = Arrays.asList(localBuildParams[2].split("\u0000"));
