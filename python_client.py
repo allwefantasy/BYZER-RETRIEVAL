@@ -15,30 +15,30 @@ class ArrowFlightClient:
         reader = self.client.do_get(ticket)
         return reader.read_all().to_pandas()
 
-# Py4J Client
-from py4j.java_gateway import JavaGateway
-
-class Py4JClient:
-    def __init__(self):
-        self.gateway = JavaGateway()
-        self.retrieval = self.gateway.entry_point
-        
-    def create_table(self, table_settings):
-        return self.retrieval.createTable(table_settings)
-    
-    def search(self, query):
-        return self.retrieval.search(query)
-
-# Usage Example
-if __name__ == "__main__":
-    # Using Arrow Flight
-    arrow_client = ArrowFlightClient()
-    arrow_client.create_table('{"database": "db1", "table": "table1"}')
-    results = arrow_client.search('{"query": "..."}')
-    print(results)
-    
-    # Using Py4J
-    py4j_client = Py4JClient()
-    py4j_client.create_table('{"database": "db1", "table": "table1"}')
-    results = py4j_client.search('{"query": "..."}')
-    print(results)
+# # Py4J Client
+# from py4j.java_gateway import JavaGateway
+#
+# class Py4JClient:
+#     def __init__(self):
+#         self.gateway = JavaGateway()
+#         self.retrieval = self.gateway.entry_point
+#
+#     def create_table(self, table_settings):
+#         return self.retrieval.createTable(table_settings)
+#
+#     def search(self, query):
+#         return self.retrieval.search(query)
+#
+# # Usage Example
+# if __name__ == "__main__":
+#     # Using Arrow Flight
+#     arrow_client = ArrowFlightClient()
+#     arrow_client.create_table('{"database": "db1", "table": "table1"}')
+#     results = arrow_client.search('{"query": "..."}')
+#     print(results)
+#
+#     # Using Py4J
+#     py4j_client = Py4JClient()
+#     py4j_client.create_table('{"database": "db1", "table": "table1"}')
+#     results = py4j_client.search('{"query": "..."}')
+#     print(results)

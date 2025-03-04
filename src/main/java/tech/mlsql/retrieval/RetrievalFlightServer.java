@@ -33,6 +33,8 @@ public class RetrievalFlightServer {
             flightServer.start();
             System.out.println("Arrow Flight Server started on port 33333");
             flightServer.awaitTermination();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
