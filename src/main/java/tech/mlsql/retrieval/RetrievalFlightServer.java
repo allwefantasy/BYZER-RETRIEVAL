@@ -219,17 +219,9 @@ public class RetrievalFlightServer {
                                 searchQuery = Utils.toRecord(query, SearchQuery.class);
                             } catch (Exception e) {
                                 // If it's just a keyword query string, create a simple SearchQuery
-                                searchQuery = new SearchQuery(
-                                    database, 
-                                    table,
-                                    Collections.emptyList(),  // no filters
-                                    Collections.emptyList(),  // no sorts
-                                    Optional.of(query),       // keyword
-                                    Optional.empty(),         // fields
-                                    Optional.empty(),         // vector
-                                    Optional.empty(),         // vectorField
-                                    10                        // default limit
-                                );
+                                e.printStackTrace();
+                                listener.onError(CallStatus.INTERNAL.withDescription(e.getMessage()).toRuntimeException());
+                                return;
                             }
                             
                             // Convert back to JSON for the master
