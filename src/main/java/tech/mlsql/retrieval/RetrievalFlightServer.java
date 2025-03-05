@@ -15,8 +15,12 @@ import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.Float4Vector;
 import tech.mlsql.retrieval.records.*;
 import tech.mlsql.retrieval.schema.SchemaUtils;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Constructor;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -26,6 +30,9 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import java.lang.reflect.Method;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.Files;
 
 
 public class RetrievalFlightServer {
@@ -375,33 +382,126 @@ public class RetrievalFlightServer {
     }
 
     public static void main(String[] args) throws IOException {
-        // 添加JVM参数指令
-//        var jvmOptions = Utils.defaultJvmOptions();
-//        String joinedOptions = String.join(" ", jvmOptions);
-//        System.out.println(joinedOptions);
-        
-        // Initialize cluster settings
-        ClusterSettings clusterSettings = new ClusterSettings(
-                "local",
-                "/tmp/cluster",
-                1
-        );
-        EnvSettings envSettings = new EnvSettings();
-        JVMSettings jvmSettings = new JVMSettings(Utils.defaultJvmOptions());
-        ResourceRequirementSettings resourceSettings = new ResourceRequirementSettings(
-                Arrays.asList(new ResourceRequirement("", 0.1))
-        );
+        // 解析命令行参数
+        String configFile = null;
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("--file") && i + 1 < args.length) {
+                configFile = args[i + 1];
+                i++;
+            }
+        }
 
-        ClusterInfo clusterInfo = new ClusterInfo(
-                clusterSettings,
-                jvmSettings,
-                envSettings,
-                resourceSettings
-        );
+        ClusterInfo clusterInfo;
+        
+        // 如果指定了配置文件，从YAML文件加载配置
+        if (configFile != null) {
+            clusterInfo = loadClusterInfoFromYaml(configFile);            
+        } else {
+            // 使用默认配置
+            // 使用 Path API 来确保跨平台兼容性
+            Path defaultStoragePath = Paths.get(System.getProperty("user.home"), ".auto-coder", "storage", "local");
+            
+            ClusterSettings clusterSettings = new ClusterSettings(
+                    "local",
+                    defaultStoragePath.toString(),
+                    1
+            );
+            EnvSettings envSettings = new EnvSettings();
+            JVMSettings jvmSettings = new JVMSettings(Utils.defaultJvmOptions());
+            ResourceRequirementSettings resourceSettings = new ResourceRequirementSettings(
+                    Arrays.asList(new ResourceRequirement("", 0.1))
+            );
+
+            clusterInfo = new ClusterInfo(
+                    clusterSettings,
+                    jvmSettings,
+                    envSettings,
+                    resourceSettings
+            );
+        }
+
+        // 确保存储目录存在 - 使用 Files API 处理目录创建
+        Path storageDir = Paths.get(clusterInfo.clusterSettings().location());
+        if (!Files.exists(storageDir)) {
+            try {
+                Files.createDirectories(storageDir);
+                System.out.println("Created storage directory: " + storageDir.toAbsolutePath());
+            } catch (IOException e) {
+                System.err.println("ERROR: Failed to create storage directory: " + storageDir.toAbsolutePath());
+                e.printStackTrace();
+                throw new IOException("Cannot start server without a valid storage directory", e);
+            }
+        }
 
         LocalRetrievalMaster master = new LocalRetrievalMaster(clusterInfo);
         new RetrievalFlightServer(master).start();
     }
     
+    /**
+     * 从YAML文件加载集群配置
+     * @param filePath YAML配置文件路径
+     * @return 集群配置信息
+     */
+    private static ClusterInfo loadClusterInfoFromYaml(String filePath) throws IOException {
+        try {
+            Yaml yaml = new Yaml();
+            Map<String, Object> config;
+            
+            try (FileInputStream inputStream = new FileInputStream(new File(filePath))) {
+                config = yaml.load(inputStream);
+            }
 
+            // 解析集群设置
+            Map<String, Object> clusterSettingsMap = (Map<String, Object>) config.getOrDefault("clusterSettings", Collections.emptyMap());
+            String name = (String) clusterSettingsMap.getOrDefault("name", "local");
+            
+            // 跨平台路径处理
+            String locationStr = (String) clusterSettingsMap.getOrDefault("location", null);
+            Path location;
+            
+            if (locationStr == null) {
+                // 使用默认路径
+                location = Paths.get(System.getProperty("user.home"), ".auto-coder", "storage", "local");
+            } else if (locationStr.startsWith("~")) {
+                // 将 ~ 扩展为用户主目录
+                location = Paths.get(System.getProperty("user.home"), locationStr.substring(1));
+            } else {
+                location = Paths.get(locationStr);
+            }
+            
+            int numNodes = ((Number) clusterSettingsMap.getOrDefault("numNodes", 1)).intValue();
+            ClusterSettings clusterSettings = new ClusterSettings(name, location.toString(), numNodes);
+            
+            // 解析环境设置
+            Map<String, Object> envSettingsMap = (Map<String, Object>) config.getOrDefault("envSettings", Collections.emptyMap());
+            String javaHome = (String) envSettingsMap.getOrDefault("javaHome", System.getenv("JAVA_HOME"));
+            String path = (String) envSettingsMap.getOrDefault("path", System.getenv("PATH"));
+            EnvSettings envSettings = new EnvSettings(javaHome, path);
+            
+            // 解析JVM设置
+            Map<String, Object> jvmSettingsMap = (Map<String, Object>) config.getOrDefault("jvmSettings", Collections.emptyMap());
+            List<String> options = (List<String>) jvmSettingsMap.getOrDefault("options", Utils.defaultJvmOptions());
+            JVMSettings jvmSettings = new JVMSettings(options);
+            
+            // 解析资源需求设置
+            Map<String, Object> resourceSettingsMap = (Map<String, Object>) config.getOrDefault("resourceSettings", Collections.emptyMap());
+            List<Map<String, Object>> requirementsList = (List<Map<String, Object>>) resourceSettingsMap.getOrDefault("requirements", 
+                    Collections.singletonList(Map.of("name", "", "quantity", 0.1)));
+            
+            List<ResourceRequirement> requirements = new ArrayList<>();
+            for (Map<String, Object> req : requirementsList) {
+                String reqName = (String) req.getOrDefault("name", "");
+                double quantity = ((Number) req.getOrDefault("quantity", 0.1)).doubleValue();
+                requirements.add(new ResourceRequirement(reqName, quantity));
+            }
+            
+            ResourceRequirementSettings resourceSettings = new ResourceRequirementSettings(requirements);
+            
+            return new ClusterInfo(clusterSettings, jvmSettings, envSettings, resourceSettings);
+        } catch (Exception e) {
+            System.err.println("Error loading configuration from YAML file: " + e.getMessage());
+            e.printStackTrace();
+            throw new IOException("Failed to load configuration from " + filePath, e);
+        }
+    }
 }

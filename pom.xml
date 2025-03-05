@@ -94,6 +94,13 @@
             <artifactId>flight-core</artifactId>
             <version>${arrow.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>1.30</version>
+        </dependency>
+
     </dependencies>
 
     <!--assembly-->

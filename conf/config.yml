@@ -1,0 +1,4 @@
+clusterSettings:
+  name: local-cluster
+  location: /path/to/cluster
+  numNodes: 2

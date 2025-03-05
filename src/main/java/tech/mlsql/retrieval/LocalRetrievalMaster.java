@@ -65,10 +65,36 @@ public class LocalRetrievalMaster {
     public boolean buildFromLocal(String database, String table, List<String> batchData) throws Exception {
         logger.info("Building from local data for database: {}, table: {} with {} records", 
             database, table, batchData.size());
-        for (var worker : workers) {
-            logger.debug("Building data on worker {}", workers.indexOf(worker));
-            worker.buildFromLocal(database, table, batchData);
+        
+        // Split batchData to shards, where the number of shards equals the number of workers
+        var batchDataShards = new ArrayList<List<String>>();
+        for (int i = 0; i < workers.size(); i++) {
+            batchDataShards.add(new ArrayList<>());
         }
+        
+        // Route each data record to the appropriate shard based on its _id field
+        for (var row : batchData) {
+            var data = Utils.toRecord(row, Map.class);
+            if (data.containsKey("_id")) {
+                var id = data.get("_id");
+                var shardId = Utils.route(id, workers.size());
+                batchDataShards.get(shardId).add(row);
+            } else {
+                throw new Exception("The data does not contain _id field");
+            }
+        }
+        
+        // Send each shard to its corresponding worker
+        for (int i = 0; i < workers.size(); i++) {
+            var worker = workers.get(i);
+            var shardData = batchDataShards.get(i);
+            if (!shardData.isEmpty()) {
+                logger.debug("Building shard {} on worker {} with {} records", 
+                    i, i, shardData.size());
+                worker.buildFromLocal(database, table, shardData);
+            }
+        }
+        
         logger.info("Build from local completed successfully");
         return true;
     }
