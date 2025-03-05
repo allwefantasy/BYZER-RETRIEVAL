@@ -87,6 +87,11 @@ public class RetrievalFlightServer {
                 Field.nullable("table", Types.MinorType.VARCHAR.getType()),
                 Field.nullable("query", Types.MinorType.VARCHAR.getType())
         ));
+        
+        private static final Schema COMMIT_SCHEMA = new Schema(Arrays.asList(
+                Field.nullable("database", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("table", Types.MinorType.VARCHAR.getType())
+        ));
 
         public RetrievalFlightProducer(LocalRetrievalMaster master, BufferAllocator allocator) {
             this.master = master;
@@ -209,6 +214,30 @@ public class RetrievalFlightServer {
 
                             String searchResults = master.search(query);
                             listener.onNext(new Result(searchResults.getBytes()));
+                        }
+                        break;
+                    }
+                    
+                    case "Commit": {
+                        try (BufferAllocator localAllocator = allocator.newChildAllocator("commit", 0, Long.MAX_VALUE);
+                             ArrowStreamReader reader = new ArrowStreamReader(
+                                     new ByteArrayInputStream(action.getBody()), localAllocator);
+                             VectorSchemaRoot root = VectorSchemaRoot.create(new Schema(Arrays.asList(
+                                     Field.nullable("database", Types.MinorType.VARCHAR.getType()),
+                                     Field.nullable("table", Types.MinorType.VARCHAR.getType())
+                             )), localAllocator)) {
+                            
+                            reader.loadNextBatch();
+                            VectorSchemaRoot batchRoot = reader.getVectorSchemaRoot();
+                            
+                            VarCharVector databaseVector = (VarCharVector) batchRoot.getVector("database");
+                            VarCharVector tableVector = (VarCharVector) batchRoot.getVector("table");
+
+                            String database = new String(databaseVector.get(0));
+                            String table = new String(tableVector.get(0));
+
+                            boolean success = master.commit(database, table);
+                            listener.onNext(new Result(Boolean.toString(success).getBytes()));
                         }
                         break;
                     }
