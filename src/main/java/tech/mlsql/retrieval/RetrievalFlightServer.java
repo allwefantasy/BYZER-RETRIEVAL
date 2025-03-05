@@ -88,6 +88,15 @@ public class RetrievalFlightServer {
                 Field.nullable("query", Types.MinorType.VARCHAR.getType())
         ));
         
+        private static final Schema FILTER_SCHEMA = new Schema(Arrays.asList(
+                Field.nullable("query", Types.MinorType.VARCHAR.getType())
+        ));
+        
+        private static final Schema TRUNCATE_SCHEMA = new Schema(Arrays.asList(
+                Field.nullable("database", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("table", Types.MinorType.VARCHAR.getType())
+        ));
+        
         private static final Schema COMMIT_SCHEMA = new Schema(Arrays.asList(
                 Field.nullable("database", Types.MinorType.VARCHAR.getType()),
                 Field.nullable("table", Types.MinorType.VARCHAR.getType())
@@ -222,6 +231,52 @@ public class RetrievalFlightServer {
                                 return;
                             }
                             listener.onNext(new Result(searchResults.getBytes()));
+                        }
+                        break;
+                    }
+                    
+                    case "Filter": {
+                        try (BufferAllocator localAllocator = allocator.newChildAllocator("filter", 0, Long.MAX_VALUE);
+                             ArrowStreamReader reader = new ArrowStreamReader(
+                                     new ByteArrayInputStream(action.getBody()), localAllocator);
+                             VectorSchemaRoot root = VectorSchemaRoot.create(FILTER_SCHEMA, localAllocator)) {
+                            
+                            reader.loadNextBatch();
+                            VectorSchemaRoot batchRoot = reader.getVectorSchemaRoot();
+                            
+                            VarCharVector queryVector = (VarCharVector) batchRoot.getVector("query");
+                            String query = new String(queryVector.get(0));
+                            
+                            String filterResults = "[]";
+                            try {
+                                filterResults = master.filter(query);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                listener.onError(CallStatus.INTERNAL.withDescription(e.getMessage()).toRuntimeException());
+                                return;
+                            }
+                            listener.onNext(new Result(filterResults.getBytes()));
+                        }
+                        break;
+                    }
+                    
+                    case "Truncate": {
+                        try (BufferAllocator localAllocator = allocator.newChildAllocator("truncate", 0, Long.MAX_VALUE);
+                             ArrowStreamReader reader = new ArrowStreamReader(
+                                     new ByteArrayInputStream(action.getBody()), localAllocator);
+                             VectorSchemaRoot root = VectorSchemaRoot.create(TRUNCATE_SCHEMA, localAllocator)) {
+                            
+                            reader.loadNextBatch();
+                            VectorSchemaRoot batchRoot = reader.getVectorSchemaRoot();
+                            
+                            VarCharVector databaseVector = (VarCharVector) batchRoot.getVector("database");
+                            VarCharVector tableVector = (VarCharVector) batchRoot.getVector("table");
+
+                            String database = new String(databaseVector.get(0));
+                            String table = new String(tableVector.get(0));
+
+                            boolean success = master.truncate(database, table);
+                            listener.onNext(new Result(Boolean.toString(success).getBytes()));
                         }
                         break;
                     }
