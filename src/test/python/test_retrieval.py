@@ -1,6 +1,13 @@
 import pyarrow.flight as flight
 import pyarrow as pa
 import json
+from byzerllm.apps.byzer_storage.simple_api import (
+    SchemaBuilder,
+    DataType,
+    FieldOption,
+    SortOption,
+    ByzerStorage,
+)
 
 class RetrievalClient:
     def __init__(self, host="localhost", port=33333):
@@ -136,17 +143,17 @@ if __name__ == "__main__":
     client = RetrievalClient()
     
     # 1. Create table
-    schema = '''
-    {
-        "type": "struct",
-        "fields": [
-            {"name": "_id", "type": "long"},
-            {"name": "text", "type": "string", "analyze": true},
-            {"name": "vector", "type": "array", "elementType": "float"}
-        ]
-    }
-    '''
-    print("Creating table...")
+    # storage = ByzerStorage("cluster","test_db", "test_table")
+    # st(field(_id,string),field(text,string,analyze),field(vector,array(float)))
+    schema_builder = SchemaBuilder(None)
+    schema = (
+            schema_builder
+            .add_field("_id", DataType.LONG)
+            .add_field("text", DataType.STRING, [FieldOption.ANALYZE])
+            .add_array_field("vector", DataType.FLOAT)
+            .build()
+        )
+    print(f"Creating table... {schema}")
     print(client.create_table("test_db", "test_table", schema, "/tmp/test_table"))
     
     # 2. Build data
