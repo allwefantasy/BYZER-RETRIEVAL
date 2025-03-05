@@ -211,22 +211,16 @@ public class RetrievalFlightServer {
                             String database = new String(databaseVector.get(0));
                             String table = new String(tableVector.get(0));
                             String query = new String(queryVector.get(0));
-
-                            // Create a proper SearchQuery object from the query string
-                            SearchQuery searchQuery;
+                            // Convert back to JSON for the master
+                            String searchResults = "[]";
                             try {
-                                // If the query is already a JSON representation of SearchQuery
-                                searchQuery = Utils.toRecord(query, SearchQuery.class);
-                            } catch (Exception e) {
-                                // If it's just a keyword query string, create a simple SearchQuery
+                                System.out.println(query);
+                                searchResults = master.search(query);
+                            }catch (Exception e) {
                                 e.printStackTrace();
                                 listener.onError(CallStatus.INTERNAL.withDescription(e.getMessage()).toRuntimeException());
                                 return;
                             }
-                            
-                            // Convert back to JSON for the master
-                            String searchQueryJson = Utils.toJson(searchQuery);
-                            String searchResults = master.search(searchQueryJson);
                             listener.onNext(new Result(searchResults.getBytes()));
                         }
                         break;

@@ -2,6 +2,14 @@ import pyarrow as pa
 import pyarrow.flight as flight
 import json
 from typing import List, Dict, Any, Optional, Union
+from byzerllm.apps.byzer_storage.simple_api import (
+    SchemaBuilder,
+    DataType,
+    FieldOption,
+    SortOption,
+    QueryBuilder,
+    SearchQuery
+)
 
 class RetrievalClient:
     def __init__(self, host: str = "localhost", port: int = 33333):
@@ -33,7 +41,7 @@ class RetrievalClient:
             pa.array([table]),
             pa.array([schema]),
             pa.array([location]),
-            pa.array([num_shards])
+            pa.array([num_shards], type=pa.int32())
         ]
         
         batch = pa.RecordBatch.from_arrays(
@@ -103,49 +111,38 @@ class RetrievalClient:
                sorts: Optional[List[Dict[str, str]]] = None,
                fields: Optional[List[str]] = None,
                limit: int = 10) -> List[Dict[str, Any]]:
-        """Search the table with the given query parameters.
+        """使用给定的查询参数搜索表。
         
-        Args:
-            database: The database name
-            table: The table name
-            keyword: Optional keyword for text search
-            vector: Optional vector for vector search
-            vector_field: Field name for vector search
-            filters: Optional list of filter conditions
-            sorts: Optional list of sort conditions
-            fields: Optional list of fields to return
-            limit: Maximum number of results to return
+        参数:
+            database: 数据库名称
+            table: 表名称
+            keyword: 可选的文本搜索关键词
+            vector: 可选的向量搜索值
+            vector_field: 向量搜索的字段名
+            filters: 可选的过滤条件
+            sorts: 可选的排序条件
+            fields: 可选的返回字段列表
+            limit: 返回结果的最大数量
         
-        Returns:
-            List of matching documents
+        返回:
+            匹配文档的列表
         """
-        # Construct the search query
-        query = {
-            "database": database,
-            "table": table,
-            "limit": limit
-        }
+        # 构建搜索查询        
+        search_query = SearchQuery(
+            database=database,
+            table=table,
+            keyword=keyword,
+            vector=vector or [],
+            vectorField=vector_field,
+            filters=filters or {},
+            fields=fields or [],
+            sorts=sorts,
+            limit=limit,
+        )
+        # 将查询转换为JSON
+        query_json = f"[{','.join([x.json() for x in [search_query]])}]"
         
-        if keyword:
-            query["keyword"] = keyword
-        
-        if vector and vector_field:
-            query["vector"] = vector
-            query["vectorField"] = vector_field
-        
-        if filters:
-            query["filters"] = filters
-        
-        if sorts:
-            query["sorts"] = sorts
-        
-        if fields:
-            query["fields"] = fields
-        
-        # Convert query to JSON
-        query_json = json.dumps(query)
-        
-        # Create a record batch with the query
+        # 创建包含查询的记录批次
         batch_data = [
             pa.array([database]),
             pa.array([table]),
@@ -157,13 +154,13 @@ class RetrievalClient:
             names=['database', 'table', 'query']
         )
         
-        # Convert to IPC message
+        # 转换为IPC消息
         sink = pa.BufferOutputStream()
         writer = pa.RecordBatchStreamWriter(sink, batch.schema)
         writer.write_batch(batch)
         writer.close()
         
-        # Send action to server
+        # 向服务器发送操作
         action = flight.Action("Search", sink.getvalue().to_pybytes())
         results = list(self.client.do_action(action))
         
@@ -262,29 +259,29 @@ if __name__ == "__main__":
     client = RetrievalClient()
     
     # Create a table
-    schema = "st(field(id,string),field(content,string,analyze),field(vector,array(float)))"
+    schema = "st(field(id,string),field(content,string,analyze),field(raw_content,string),field(vector,array(float)))"
     client.create_table("test_db", "test_table", schema, "/tmp/test_table", 1)
     
     # Add some data
     data = [
-        {"id": "1", "content": "This is a test document", "vector": [0.1, 0.2, 0.3]},
-        {"id": "2", "content": "Another test document", "vector": [0.4, 0.5, 0.6]},
-        {"id": "3", "content": "Third test document", "vector": [0.7, 0.8, 0.9]}
+        {"_id": "1", "content": "This is a test document",  "raw_content": "This is a test document", "vector": [0.1, 0.2, 0.3]},
+        {"_id": "2", "content": "Another test document", "raw_content": "Another test document", "vector": [0.4, 0.5, 0.6]},
+        {"_id": "3", "content": "Third test document", "raw_content": "Third test document", "vector": [0.7, 0.8, 0.9]}
     ]
     client.build_from_local("test_db", "test_table", data)
     
     # Commit changes
     client.commit("test_db", "test_table")
     
-    # Search by keyword
-    results = client.search("test_db", "test_table", keyword="test document")
-    print("Keyword search results:", results)
+    # # Search by keyword
+    # results = client.search("test_db", "test_table", keyword="test document")
+    # print("Keyword search results:", results)
     
-    # Search by vector
-    results = client.search("test_db", "test_table", vector=[0.1, 0.2, 0.3], vector_field="vector")
-    print("Vector search results:", results)
+    # # Search by vector
+    # results = client.search("test_db", "test_table", vector=[0.1, 0.2, 0.3], vector_field="vector")
+    # print("Vector search results:", results)
     
-    # Combined search
+    # #Combined search
     results = client.search("test_db", "test_table", 
                            keyword="test", 
                            vector=[0.1, 0.2, 0.3], 
