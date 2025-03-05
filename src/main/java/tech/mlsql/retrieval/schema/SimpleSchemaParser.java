@@ -85,7 +85,9 @@ public class SimpleSchemaParser {
             }
             return structType;
         } else {
-            throw new RuntimeException("not support");
+            throw new IllegalArgumentException("Unsupported schema type: " + schemaStr + 
+                ". Supported types are: boolean, byte, short, date, long, float, double, " +
+                "decimal, binary, string, array, map, st, field");
         }
 
     }
