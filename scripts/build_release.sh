@@ -181,18 +181,13 @@ build_for_platform() {
     fi
     
     # 复制依赖JAR包
+    mvn dependency:copy-dependencies -DoutputDirectory=target/dependencies
     echo "复制JAR包和依赖..."
     # 复制主JAR包
     cp "$BASE_DIR/target/"*.jar "$RELEASE_LIBS_DIR/"
     
     # 复制依赖JAR包
-    if [ "$FIRST_BUILD" = true ] || [ "$BUILD_ALL" = false ]; then
-        # 使用Maven依赖插件复制所有依赖到libs目录
-        mvn dependency:copy-dependencies -DoutputDirectory="$RELEASE_LIBS_DIR" -DincludeScope=runtime
-    else
-        # 从第一个平台的构建中复制已有的依赖
-        cp "$FIRST_PLATFORM_LIBS_DIR/"*.jar "$RELEASE_LIBS_DIR/"
-    fi
+    cp "$BASE_DIR/target/dependencies"/*.jar "$RELEASE_LIBS_DIR/"
     
     # 复制启动脚本
     echo "复制服务管理脚本..."
@@ -232,11 +227,6 @@ EOF
     echo "发布目录: $RELEASE_DIR"
     echo "发布包: $RELEASES_DIR/$RELEASE_NAME.tar.gz"
     echo "===================================="
-    
-    # 记录第一个平台的libs目录路径(用于后续平台复用依赖)
-    if [ -z "$FIRST_PLATFORM_LIBS_DIR" ]; then
-        FIRST_PLATFORM_LIBS_DIR="$RELEASE_LIBS_DIR"
-    fi
     
     return 0
 }

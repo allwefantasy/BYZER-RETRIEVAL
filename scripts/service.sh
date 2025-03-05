@@ -16,14 +16,30 @@ PID_FILE="$BASE_DIR/service.pid"
 LOG_FILE="$LOGS_DIR/service.log"
 ERROR_LOG="$LOGS_DIR/error.log"
 
+# 根据操作系统检测Java命令路径
+detect_java_cmd() {
+    # 检测操作系统类型
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS平台
+        if [ -d "$JAVA_HOME/Contents/Home" ]; then
+            echo "$JAVA_HOME/Contents/Home/bin/java"
+        else
+            echo "$JAVA_HOME/bin/java"
+        fi
+    else
+        # Linux或Windows平台
+        echo "$JAVA_HOME/bin/java"
+    fi
+}
+
 # Java命令完整路径
-JAVA_CMD="$JAVA_HOME/bin/java"
+JAVA_CMD=$(detect_java_cmd)
 
 # 应用主类 - 更改为你的实际主类
 MAIN_CLASS="tech.mlsql.retrieval.RetrievalFlightServer"
 
-# JVM选项
-JVM_OPTS="-Xms1g -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$LOGS_DIR --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.annotation=ALL-UNNAMED --add-opens java.base/java.lang.invoke=ALL-UNNAMED --add-opens java.base/java.lang.module=ALL-UNNAMED --add-opens java.base/java.lang.ref=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED --add-opens java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens java.base/java.util.concurrent.locks=ALL-UNNAMED --add-opens java.base/java.util.function=ALL-UNNAMED --add-opens java.base/java.util.jar=ALL-UNNAMED --add-opens java.base/java.util.regex=ALL-UNNAMED --add-opens java.base/java.util.stream=ALL-UNNAMED --add-opens java.base/java.util.zip=ALL-UNNAMED --add-opens java.base/java.util.spi=ALL-UNNAMED --add-opens java.base/java.text=ALL-UNNAMED --add-opens java.base/java.math=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --enable-preview --add-modules jdk.incubator.vector"
+# JVM选项 - 使用ZGC替代G1GC
+JVM_OPTS="-Xms1g -Xmx4g -XX:+UseZGC -XX:+UnlockExperimentalVMOptions -XX:ConcGCThreads=2 -XX:ZCollectionInterval=120 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$LOGS_DIR --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.annotation=ALL-UNNAMED --add-opens java.base/java.lang.invoke=ALL-UNNAMED --add-opens java.base/java.lang.module=ALL-UNNAMED --add-opens java.base/java.lang.ref=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED --add-opens java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens java.base/java.util.concurrent.locks=ALL-UNNAMED --add-opens java.base/java.util.function=ALL-UNNAMED --add-opens java.base/java.util.jar=ALL-UNNAMED --add-opens java.base/java.util.regex=ALL-UNNAMED --add-opens java.base/java.util.stream=ALL-UNNAMED --add-opens java.base/java.util.zip=ALL-UNNAMED --add-opens java.base/java.util.spi=ALL-UNNAMED --add-opens java.base/java.text=ALL-UNNAMED --add-opens java.base/java.math=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --enable-preview --add-modules jdk.incubator.vector"
 
 # 应用选项
 APP_OPTS=""
