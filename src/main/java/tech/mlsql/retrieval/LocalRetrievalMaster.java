@@ -274,6 +274,12 @@ public class LocalRetrievalMaster {
         return new ScoreResult(newScores, idToDocs);
     }
 
+    public boolean commit(String database, String table) throws Exception {
+        for (var worker : workers) {
+            worker.commit(database, table);
+        }
+        return true;
+    }
 
     public boolean truncate(String database, String table) throws Exception {
         for (var worker : workers) {
