@@ -88,6 +88,11 @@ public class RetrievalFlightServer {
                 Field.nullable("query", Types.MinorType.VARCHAR.getType())
         ));
 
+        private static final Schema COMMIT_SCHEMA = new Schema(Arrays.asList(
+                Field.nullable("database", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("table", Types.MinorType.VARCHAR.getType())
+        ));
+
         public RetrievalFlightProducer(LocalRetrievalMaster master, BufferAllocator allocator) {
             this.master = master;
             this.allocator = allocator;
@@ -213,6 +218,30 @@ public class RetrievalFlightServer {
                         break;
                     }
                     
+                    case "Commit": {
+                        try (BufferAllocator localAllocator = allocator.newChildAllocator("commit", 0, Long.MAX_VALUE);
+                             ArrowStreamReader reader = new ArrowStreamReader(
+                                     new ByteArrayInputStream(action.getBody()), localAllocator);
+                             VectorSchemaRoot root = VectorSchemaRoot.create(COMMIT_SCHEMA, localAllocator)) {
+                            
+                            reader.loadNextBatch();
+                            VectorSchemaRoot readerRoot = reader.getVectorSchemaRoot();
+                            root.setRowCount(readerRoot.getRowCount());
+
+                            VarCharVector databaseVector = (VarCharVector) readerRoot.getVector("database");
+                            VarCharVector tableVector = (VarCharVector) readerRoot.getVector("table");
+
+                            String database = new String(databaseVector.get(0));
+                            String table = new String(tableVector.get(0));
+
+                            boolean success = true;
+                            for (var worker : master.getClusterInfo().getWorkers()) {
+                                success = success && worker.commit(database, table);
+                            }
+                            listener.onNext(new Result(Boolean.toString(success).getBytes()));
+                        }
+                        break;
+                    }
                     case "Shutdown": {
                         master.shutdown();
                         listener.onNext(new Result("true".getBytes()));
