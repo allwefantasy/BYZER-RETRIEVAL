@@ -13,7 +13,7 @@ DEFAULT_VERSION="21.0.2"
 DEFAULT_TARGET_DIR="$BASE_DIR/releases/jdks/$DEFAULT_OS/jdk-$DEFAULT_VERSION"
 
 # 支持的JDK版本和操作系统
-SUPPORTED_VERSIONS=("21.0.2" "21.0.1" "21")
+SUPPORTED_VERSIONS=("21.0.2")
 SUPPORTED_OS=("linux-x64" "linux-aarch64" "macos-x64" "macos-aarch64" "windows-x64")
 
 # 默认检测操作系统类型
