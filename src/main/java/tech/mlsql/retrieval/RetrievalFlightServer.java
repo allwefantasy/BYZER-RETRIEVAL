@@ -212,7 +212,29 @@ public class RetrievalFlightServer {
                             String table = new String(tableVector.get(0));
                             String query = new String(queryVector.get(0));
 
-                            String searchResults = master.search(query);
+                            // Create a proper SearchQuery object from the query string
+                            SearchQuery searchQuery;
+                            try {
+                                // If the query is already a JSON representation of SearchQuery
+                                searchQuery = Utils.toRecord(query, SearchQuery.class);
+                            } catch (Exception e) {
+                                // If it's just a keyword query string, create a simple SearchQuery
+                                searchQuery = new SearchQuery(
+                                    database, 
+                                    table,
+                                    Collections.emptyList(),  // no filters
+                                    Collections.emptyList(),  // no sorts
+                                    Optional.of(query),       // keyword
+                                    Optional.empty(),         // fields
+                                    Optional.empty(),         // vector
+                                    Optional.empty(),         // vectorField
+                                    10                        // default limit
+                                );
+                            }
+                            
+                            // Convert back to JSON for the master
+                            String searchQueryJson = Utils.toJson(searchQuery);
+                            String searchResults = master.search(searchQueryJson);
                             listener.onNext(new Result(searchResults.getBytes()));
                         }
                         break;
