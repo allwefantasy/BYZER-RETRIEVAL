@@ -45,3 +45,5 @@ release.sh
 .auto-coder/
 actions/
 output.txt
+release/
+releases/
