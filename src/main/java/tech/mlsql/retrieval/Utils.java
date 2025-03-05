@@ -100,7 +100,8 @@ public class Utils {
                 "java.base/java.nio",
                 "java.base/java.net",
                 "java.base/java.time",
-                "java.base/sun.nio.ch"
+                "java.base/sun.nio.ch",
+                "java.base/sun.misc"
         )) {
             jvmSettings.add("--add-opens");
             jvmSettings.add(arg + "=ALL-UNNAMED");

@@ -28,6 +28,25 @@ class RetrievalClient:
         result = self.client.do_action(action)
         return json.loads(next(result).body.to_pybytes().decode())
     
+    def delete_by_filter(self, database, table, condition):
+        database_arr = pa.array([database], type=pa.string())
+        table_arr = pa.array([table], type=pa.string())
+        condition_arr = pa.array([condition], type=pa.string())
+
+        batch = pa.RecordBatch.from_arrays(
+            [database_arr, table_arr, condition_arr],
+            names=["database", "table", "condition"]
+        )
+        
+        sink = pa.BufferOutputStream()
+        with pa.ipc.new_stream(sink, batch.schema) as writer:
+            writer.write_batch(batch)
+        arrow_data = sink.getvalue()
+
+        action = flight.Action("DeleteByFilter", arrow_data)
+        result = self.client.do_action(action)
+        return json.loads(next(result).body.to_pybytes().decode())
+    
     def build_from_local(self, database, table, data):
         database_arr = pa.array([database], type=pa.string())
         table_arr = pa.array([table], type=pa.string())
@@ -47,27 +66,64 @@ class RetrievalClient:
         result = self.client.do_action(action)
         return json.loads(next(result).body.to_pybytes().decode())
     
-    def search(self, database, table, keyword=None, vector=None, vector_field=None, limit=10):
-        search_query = {
+    def search(self, query_json):
+        """
+        Execute a search with the provided query JSON
+        
+        Args:
+            query_json: JSON string or dictionary containing the search query
+        """
+        if isinstance(query_json, dict):
+            query_json = json.dumps(query_json)
+            
+        ticket = flight.Ticket(query_json.encode())
+        flight_info = self.client.get_flight_info(ticket)
+        reader = self.client.do_get(flight_info.endpoints[0].ticket)
+        table = reader.read_all()
+        return table.to_pydict()
+    
+    def search_by_keyword(self, database, table, keyword, limit=10):
+        """Helper method to search by keyword"""
+        query = {
             "database": database,
             "table": table,
-            "filters": {},
-            "sorts": [],
             "keyword": keyword,
-            "fields": [],
+            "limit": limit
+        }
+        return self.search(query)
+    
+    def search_by_vector(self, database, table, vector, vector_field, limit=10):
+        """Helper method to search by vector"""
+        query = {
+            "database": database,
+            "table": table,
             "vector": vector,
             "vectorField": vector_field,
             "limit": limit
         }
-        ticket = flight.Ticket(json.dumps(search_query).encode())
-        flight_info = self.client.get_flight_info(ticket)
-        reader = self.client.do_get(ticket)
-        table = reader.read_all()
-        return table.to_pydict()
+        return self.search(query)
     
     def commit(self, database, table):
-        params = [database, table]
-        action = flight.Action("Commit", "\n".join(params).encode())
+        """
+        Commit changes to a table
+        
+        Note: This implementation assumes the server has a specific action for commit
+        If not implemented on the server side, this would need to be modified
+        """
+        database_arr = pa.array([database], type=pa.string())
+        table_arr = pa.array([table], type=pa.string())
+
+        batch = pa.RecordBatch.from_arrays(
+            [database_arr, table_arr],
+            names=["database", "table"]
+        )
+        
+        sink = pa.BufferOutputStream()
+        with pa.ipc.new_stream(sink, batch.schema) as writer:
+            writer.write_batch(batch)
+        arrow_data = sink.getvalue()
+
+        action = flight.Action("Commit", arrow_data)
         result = self.client.do_action(action)
         return json.loads(next(result).body.to_pybytes().decode())
     
@@ -115,14 +171,18 @@ if __name__ == "__main__":
     
     # 4. Search by keyword
     print("Searching by keyword...")
-    results = client.search("test_db", "test_table", keyword="test")
+    results = client.search_by_keyword("test_db", "test_table", "test")
     print(results)
     
     # 5. Search by vector
     print("Searching by vector...")
-    results = client.search("test_db", "test_table", vector=[0.1, 0.2, 0.3], vector_field="vector")
+    results = client.search_by_vector("test_db", "test_table", [0.1, 0.2, 0.3], "vector")
     print(results)
     
-    # 6. Shutdown
+    # 6. Delete by filter
+    print("Deleting documents with filter...")
+    print(client.delete_by_filter("test_db", "test_table", "_id = 0"))
+    
+    # 7. Shutdown
     print("Shutting down...")
     print(client.shutdown())

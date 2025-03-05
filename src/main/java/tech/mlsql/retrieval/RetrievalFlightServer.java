@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
+import java.lang.reflect.Method;
 
 
 public class RetrievalFlightServer {
@@ -94,20 +95,23 @@ public class RetrievalFlightServer {
 
         @Override
         public void doAction(CallContext context, Action action, StreamListener<Result> listener) {
-            try (BufferAllocator allocator = new RootAllocator()) {
+            try {
                 switch (action.getType()) {
                     case "CreateTable": {
-                        try (VectorSchemaRoot root = VectorSchemaRoot.create(CREATE_TABLE_SCHEMA, allocator)) {
-                            ArrowStreamReader reader = new ArrowStreamReader(
-                                    new ByteArrayInputStream(action.getBody()), allocator);
+                        try (BufferAllocator localAllocator = allocator.newChildAllocator("create-table", 0, Long.MAX_VALUE);
+                             ArrowStreamReader reader = new ArrowStreamReader(
+                                     new ByteArrayInputStream(action.getBody()), localAllocator);
+                             VectorSchemaRoot root = VectorSchemaRoot.create(CREATE_TABLE_SCHEMA, localAllocator)) {
+                            
                             reader.loadNextBatch();
-                            root.setRowCount(reader.getVectorSchemaRoot().getRowCount());
+                            VectorSchemaRoot readerRoot = reader.getVectorSchemaRoot();
+                            root.setRowCount(readerRoot.getRowCount());
 
-                            VarCharVector databaseVector = (VarCharVector) root.getVector("database");
-                            VarCharVector tableVector = (VarCharVector) root.getVector("table");
-                            VarCharVector schemaVector = (VarCharVector) root.getVector("schema");
-                            VarCharVector locationVector = (VarCharVector) root.getVector("location");
-                            IntVector numShardsVector = (IntVector) root.getVector("numShards");
+                            VarCharVector databaseVector = (VarCharVector) readerRoot.getVector("database");
+                            VarCharVector tableVector = (VarCharVector) readerRoot.getVector("table");
+                            VarCharVector schemaVector = (VarCharVector) readerRoot.getVector("schema");
+                            VarCharVector locationVector = (VarCharVector) readerRoot.getVector("location");
+                            IntVector numShardsVector = (IntVector) readerRoot.getVector("numShards");
 
                             String database = new String(databaseVector.get(0));
                             String table = new String(tableVector.get(0));
@@ -121,15 +125,18 @@ public class RetrievalFlightServer {
                         break;
                     }
                     case "DeleteByFilter": {
-                        try (VectorSchemaRoot root = VectorSchemaRoot.create(DELETE_BY_FILTER_SCHEMA, allocator)) {
-                            ArrowStreamReader reader = new ArrowStreamReader(
-                                    new ByteArrayInputStream(action.getBody()), allocator);
+                        try (BufferAllocator localAllocator = allocator.newChildAllocator("delete-filter", 0, Long.MAX_VALUE);
+                             ArrowStreamReader reader = new ArrowStreamReader(
+                                     new ByteArrayInputStream(action.getBody()), localAllocator);
+                             VectorSchemaRoot root = VectorSchemaRoot.create(DELETE_BY_FILTER_SCHEMA, localAllocator)) {
+                            
                             reader.loadNextBatch();
-                            root.setRowCount(reader.getVectorSchemaRoot().getRowCount());
+                            VectorSchemaRoot readerRoot = reader.getVectorSchemaRoot();
+                            root.setRowCount(readerRoot.getRowCount());
 
-                            VarCharVector databaseVector = (VarCharVector) root.getVector("database");
-                            VarCharVector tableVector = (VarCharVector) root.getVector("table");
-                            VarCharVector conditionVector = (VarCharVector) root.getVector("condition");
+                            VarCharVector databaseVector = (VarCharVector) readerRoot.getVector("database");
+                            VarCharVector tableVector = (VarCharVector) readerRoot.getVector("table");
+                            VarCharVector conditionVector = (VarCharVector) readerRoot.getVector("condition");
 
                             String database = new String(databaseVector.get(0));
                             String table = new String(tableVector.get(0));
@@ -141,9 +148,11 @@ public class RetrievalFlightServer {
                         break;
                     }
                     case "BuildFromLocal": {
-                        try (VectorSchemaRoot root = VectorSchemaRoot.create(BUILD_FROM_LOCAL_SCHEMA, allocator)) {
-                            ArrowStreamReader reader = new ArrowStreamReader(
-                                    new ByteArrayInputStream(action.getBody()), allocator);
+                        try (BufferAllocator localAllocator = allocator.newChildAllocator("build-local", 0, Long.MAX_VALUE);
+                             ArrowStreamReader reader = new ArrowStreamReader(
+                                     new ByteArrayInputStream(action.getBody()), localAllocator);
+                             VectorSchemaRoot root = VectorSchemaRoot.create(BUILD_FROM_LOCAL_SCHEMA, localAllocator)) {
+                            
                             reader.loadNextBatch();
                             VectorSchemaRoot batchRoot = reader.getVectorSchemaRoot();
                             
@@ -171,16 +180,22 @@ public class RetrievalFlightServer {
                                     batchDataList.add(jsonStr);
                                 }
                             }
-
-                            boolean localBuildSuccess = master.buildFromLocal(database, table, batchDataList);
-                            listener.onNext(new Result(Boolean.toString(localBuildSuccess).getBytes()));
+                            try {
+                                boolean localBuildSuccess = master.buildFromLocal(database, table, batchDataList);
+                                listener.onNext(new Result(Boolean.toString(localBuildSuccess).getBytes()));
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                listener.onError(CallStatus.INTERNAL.withDescription(e.getMessage()).toRuntimeException());
+                            }
                         }
                         break;
                     }
                     case "Search": {
-                        try (VectorSchemaRoot root = VectorSchemaRoot.create(SEARCH_SCHEMA, allocator)) {
-                            ArrowStreamReader reader = new ArrowStreamReader(
-                                    new ByteArrayInputStream(action.getBody()), allocator);
+                        try (BufferAllocator localAllocator = allocator.newChildAllocator("search", 0, Long.MAX_VALUE);
+                             ArrowStreamReader reader = new ArrowStreamReader(
+                                     new ByteArrayInputStream(action.getBody()), localAllocator);
+                             VectorSchemaRoot root = VectorSchemaRoot.create(SEARCH_SCHEMA, localAllocator)) {
+                            
                             reader.loadNextBatch();
                             VectorSchemaRoot batchRoot = reader.getVectorSchemaRoot();
                             
@@ -214,7 +229,9 @@ public class RetrievalFlightServer {
 
         @Override
         public void getStream(CallContext context, Ticket ticket, ServerStreamListener listener) {
+            BufferAllocator streamAllocator = null;
             try {
+                streamAllocator = allocator.newChildAllocator("stream", 0, Long.MAX_VALUE);
                 String queryJson = new String(ticket.getBytes(), StandardCharsets.UTF_8);
                 String jsonResults = master.search(queryJson);
                 List<SearchResult> results = Utils.fromJsonToSearchResults(jsonResults);
@@ -226,7 +243,7 @@ public class RetrievalFlightServer {
                                 org.apache.arrow.vector.types.FloatingPointPrecision.SINGLE)), null)
                 ));
 
-                try (VectorSchemaRoot root = VectorSchemaRoot.create(schema, allocator)) {
+                try (VectorSchemaRoot root = VectorSchemaRoot.create(schema, streamAllocator)) {
                     listener.start(root);
 
                     VarCharVector idVector = (VarCharVector) root.getVector("id");
@@ -244,6 +261,10 @@ public class RetrievalFlightServer {
                 }
             } catch (Exception e) {
                 listener.error(CallStatus.INTERNAL.withDescription(e.getMessage()).toRuntimeException());
+            } finally {
+                if (streamAllocator != null) {
+                    streamAllocator.close();
+                }
             }
         }
 
@@ -262,6 +283,11 @@ public class RetrievalFlightServer {
     }
 
     public static void main(String[] args) throws IOException {
+        // 添加JVM参数指令
+//        var jvmOptions = Utils.defaultJvmOptions();
+//        String joinedOptions = String.join(" ", jvmOptions);
+//        System.out.println(joinedOptions);
+        
         // Initialize cluster settings
         ClusterSettings clusterSettings = new ClusterSettings(
                 "local",
@@ -284,4 +310,6 @@ public class RetrievalFlightServer {
         LocalRetrievalMaster master = new LocalRetrievalMaster(clusterInfo);
         new RetrievalFlightServer(master).start();
     }
+    
+
 }

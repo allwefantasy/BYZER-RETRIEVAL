@@ -15,7 +15,7 @@
         <lucene.version>9.8.0</lucene.version>
         <ray.version>2.7.0</ray.version>
         <junit.jupiter.version>5.10.0</junit.jupiter.version>
-        <arrow.version>9.0.0</arrow.version>
+        <arrow.version>18.2.0</arrow.version>
     </properties>
 
     <dependencies>
