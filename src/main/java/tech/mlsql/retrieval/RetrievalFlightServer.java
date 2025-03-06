@@ -423,9 +423,22 @@ public class RetrievalFlightServer {
     public static void main(String[] args) throws IOException {
         // 解析命令行参数
         String configFile = null;
+        String host = "127.0.0.1";
+        int port = 33333;
+        
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("--file") && i + 1 < args.length) {
                 configFile = args[i + 1];
+                i++;
+            } else if (args[i].equals("--host") && i + 1 < args.length) {
+                host = args[i + 1];
+                i++;
+            } else if (args[i].equals("--port") && i + 1 < args.length) {
+                try {
+                    port = Integer.parseInt(args[i + 1]);
+                } catch (NumberFormatException e) {
+                    System.err.println("Error: Invalid port number. Using default port 33333.");
+                }
                 i++;
             }
         }
@@ -473,7 +486,8 @@ public class RetrievalFlightServer {
         }
 
         LocalRetrievalMaster master = new LocalRetrievalMaster(clusterInfo);
-        new RetrievalFlightServer(master, "0.0.0.0", 33333).start();
+        System.out.println("Starting Retrieval Flight Server on " + host + ":" + port);
+        new RetrievalFlightServer(master, host, port).start();
     }
     
     /**

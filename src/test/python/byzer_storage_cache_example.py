@@ -113,7 +113,9 @@ def main():
             ignore_spec=ignore_spec,
             required_exts=required_exts,
             extra_params=args,
-            emb_llm=emb_llm
+            emb_llm=emb_llm,
+            host="0.0.0.0",
+            port=33333
         )        
         
         # Build the cache
