@@ -37,22 +37,25 @@ import java.nio.file.Files;
 
 public class RetrievalFlightServer {
     private final LocalRetrievalMaster master;
+    private final String host;
+    private final int port;
 
-    public RetrievalFlightServer(LocalRetrievalMaster master) {
+    public RetrievalFlightServer(LocalRetrievalMaster master, String host, int port) {
         this.master = master;
+        this.host = host;
+        this.port = port;
     }
 
     public void start() throws IOException {
         try (BufferAllocator allocator = new RootAllocator()) {
-            Location location = Location.forGrpcInsecure("0.0.0.0", 33333);
+            Location location = Location.forGrpcInsecure(host, port);
             FlightServer flightServer = FlightServer.builder(
                     allocator,
                     location,
                     new RetrievalFlightProducer(master, allocator)
             ).build();
 
-            flightServer.start();
-            System.out.println("Arrow Flight Server started on port 33333");
+            flightServer.start();            
             flightServer.awaitTermination();
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -470,7 +473,7 @@ public class RetrievalFlightServer {
         }
 
         LocalRetrievalMaster master = new LocalRetrievalMaster(clusterInfo);
-        new RetrievalFlightServer(master).start();
+        new RetrievalFlightServer(master, "0.0.0.0", 33333).start();
     }
     
     /**

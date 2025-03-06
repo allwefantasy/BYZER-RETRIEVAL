@@ -167,6 +167,9 @@ build_for_platform() {
         echo "使用Maven构建项目..."
         cd "$BASE_DIR"
         mvn clean package -DskipTests
+
+        # 复制依赖JAR包
+        mvn dependency:copy-dependencies -DoutputDirectory=target/dependencies        
         
         # 检查Maven构建是否成功
         if [ $? -ne 0 ]; then
@@ -180,9 +183,7 @@ build_for_platform() {
         echo "跳过Maven构建 (已在之前的平台构建中完成)"
     fi
     
-    # 复制依赖JAR包
-    mvn dependency:copy-dependencies -DoutputDirectory=target/dependencies
-    echo "复制JAR包和依赖..."
+    
     # 复制主JAR包
     cp "$BASE_DIR/target/"*.jar "$RELEASE_LIBS_DIR/"
     
