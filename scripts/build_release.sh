@@ -192,8 +192,9 @@ build_for_platform() {
     # 复制启动脚本
     echo "复制服务管理脚本..."
     cp "$SCRIPT_DIR/service.sh" "$RELEASE_BIN_DIR/"
+    cp "$SCRIPT_DIR/service.bat" "$RELEASE_BIN_DIR/"
     chmod +x "$RELEASE_BIN_DIR/service.sh"
-    
+    chmod +x "$RELEASE_BIN_DIR/service.bat"
     # 拷贝对应平台的JDK
     echo "复制 $os_type 平台的JDK..."
     JDK_SOURCE_DIR="$JDKS_DIR/$os_type/jdk-$JDK_VERSION"
