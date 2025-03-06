@@ -109,6 +109,13 @@ public class RetrievalFlightServer {
                 Field.nullable("table", Types.MinorType.VARCHAR.getType())
         ));
 
+        // Add a new schema definition for DeleteByIds
+        private static final Schema DELETE_BY_IDS_SCHEMA = new Schema(Arrays.asList(
+                Field.nullable("database", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("table", Types.MinorType.VARCHAR.getType()),
+                Field.nullable("ids", Types.MinorType.VARCHAR.getType())  // JSON array of IDs
+        ));
+
         public RetrievalFlightProducer(LocalRetrievalMaster master, BufferAllocator allocator) {
             this.master = master;
             this.allocator = allocator;
@@ -313,6 +320,30 @@ public class RetrievalFlightServer {
 
                             boolean success = master.commit(database, table);
                             listener.onNext(new Result(Boolean.toString(success).getBytes()));
+                        }
+                        break;
+                    }
+                    
+                    case "DeleteByIds": {
+                        try (BufferAllocator localAllocator = allocator.newChildAllocator("delete-ids", 0, Long.MAX_VALUE);
+                             ArrowStreamReader reader = new ArrowStreamReader(
+                                     new ByteArrayInputStream(action.getBody()), localAllocator);
+                             VectorSchemaRoot root = VectorSchemaRoot.create(DELETE_BY_IDS_SCHEMA, localAllocator)) {
+                            
+                            reader.loadNextBatch();
+                            VectorSchemaRoot readerRoot = reader.getVectorSchemaRoot();
+                            root.setRowCount(readerRoot.getRowCount());
+
+                            VarCharVector databaseVector = (VarCharVector) readerRoot.getVector("database");
+                            VarCharVector tableVector = (VarCharVector) readerRoot.getVector("table");
+                            VarCharVector idsVector = (VarCharVector) readerRoot.getVector("ids");
+
+                            String database = new String(databaseVector.get(0));
+                            String table = new String(tableVector.get(0));
+                            String ids = new String(idsVector.get(0));
+
+                            boolean deleteSuccess = master.deleteByIds(database, table, ids);
+                            listener.onNext(new Result(Boolean.toString(deleteSuccess).getBytes()));
                         }
                         break;
                     }
