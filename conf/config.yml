@@ -1,4 +1,4 @@
 clusterSettings:
   name: local-cluster
-  location: /path/to/cluster
+  location: /Users/allwefantasy/.auto-coder/storage
   numNodes: 2

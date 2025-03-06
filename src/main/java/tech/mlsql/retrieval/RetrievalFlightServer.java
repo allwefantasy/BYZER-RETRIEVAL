@@ -118,6 +118,11 @@ public class RetrievalFlightServer {
         public void doAction(CallContext context, Action action, StreamListener<Result> listener) {
             try {
                 switch (action.getType()) {
+                    case "ClusterInfo": {
+                        String clusterInfoJson = master.clusterInfo();
+                        listener.onNext(new Result(clusterInfoJson.getBytes(StandardCharsets.UTF_8)));
+                        break;
+                    }
                     case "CreateTable": {
                         try (BufferAllocator localAllocator = allocator.newChildAllocator("create-table", 0, Long.MAX_VALUE);
                              ArrowStreamReader reader = new ArrowStreamReader(
